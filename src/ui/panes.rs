@@ -79,6 +79,27 @@ fn pane_below<'a>(info: &PaneInfo, panes: &'a [PaneInfo]) -> Option<&'a PaneInfo
     })
 }
 
+fn pane_to_left<'a>(info: &PaneInfo, panes: &'a [PaneInfo]) -> Option<&'a PaneInfo> {
+    panes.iter().find(|other| {
+        other.id != info.id
+            && other.rect.x.saturating_add(other.rect.width) == info.rect.x
+            && ranges_overlap(
+                info.rect.y,
+                info.rect.height,
+                other.rect.y,
+                other.rect.height,
+            )
+    })
+}
+
+fn pane_above<'a>(info: &PaneInfo, panes: &'a [PaneInfo]) -> Option<&'a PaneInfo> {
+    panes.iter().find(|other| {
+        other.id != info.id
+            && other.rect.y.saturating_add(other.rect.height) == info.rect.y
+            && ranges_overlap(info.rect.x, info.rect.width, other.rect.x, other.rect.width)
+    })
+}
+
 fn shrink_for_one_cell_gap(size: u16) -> u16 {
     if size > 1 {
         size - 1
@@ -91,6 +112,7 @@ pub(crate) fn apply_pane_chrome(
     panes: Vec<PaneInfo>,
     pane_borders: bool,
     pane_gaps: bool,
+    pane_outer_border: bool,
 ) -> Vec<PaneInfo> {
     let multi_pane = panes.len() > 1;
     panes
@@ -119,6 +141,23 @@ pub(crate) fn apply_pane_chrome(
                     }
                     if below_neighbor.is_some() {
                         borders.remove(Borders::BOTTOM);
+                    }
+                }
+                // There is no separate frame widget: what reads as the outer
+                // border is the perimeter of these boxes. Dropping every edge
+                // that faces no other pane leaves the dividers alone.
+                if !pane_outer_border {
+                    if right_neighbor.is_none() {
+                        borders.remove(Borders::RIGHT);
+                    }
+                    if below_neighbor.is_none() {
+                        borders.remove(Borders::BOTTOM);
+                    }
+                    if pane_to_left(&info, &panes).is_none() {
+                        borders.remove(Borders::LEFT);
+                    }
+                    if pane_above(&info, &panes).is_none() {
+                        borders.remove(Borders::TOP);
                     }
                 }
                 borders
@@ -198,7 +237,12 @@ pub(super) fn resize_tab_panes(
         return;
     }
 
-    for info in apply_pane_chrome(tab.layout.panes(area), app.pane_borders, app.pane_gaps) {
+    for info in apply_pane_chrome(
+        tab.layout.panes(area),
+        app.pane_borders,
+        app.pane_gaps,
+        app.pane_outer_border,
+    ) {
         let pane_inner = pane_inner_rect(info.rect, info.borders);
 
         if let Some((terminal_id, rt)) = runtime_for_tab_pane(terminal_runtimes, tab, info.id) {
@@ -268,7 +312,12 @@ pub(super) fn compute_pane_infos(
         }];
     }
 
-    let mut pane_infos = apply_pane_chrome(ws.layout.panes(area), app.pane_borders, app.pane_gaps);
+    let mut pane_infos = apply_pane_chrome(
+        ws.layout.panes(area),
+        app.pane_borders,
+        app.pane_gaps,
+        app.pane_outer_border,
+    );
 
     for info in &mut pane_infos {
         let pane_inner = pane_inner_rect(info.rect, info.borders);
@@ -617,6 +666,12 @@ fn render_pane_border_titles(
     pane_infos: &[PaneInfo],
     frame: &mut Frame,
 ) {
+    // Without the outer border only some panes keep a top edge, so titles would
+    // show up on a subset of the splits. Dropping all of them is the only
+    // consistent answer.
+    if !app.pane_outer_border {
+        return;
+    }
     let buf = frame.buffer_mut();
     let area = buf.area;
     for info in pane_infos {
@@ -1054,6 +1109,7 @@ mod tests {
             workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
             true,
             false,
+            true,
         );
         let left = infos.iter().find(|info| info.id == root).unwrap();
         let right = infos.iter().find(|info| info.id == right).unwrap();
@@ -1061,6 +1117,75 @@ mod tests {
         assert_eq!(left.rect.x + left.rect.width, right.rect.x);
         assert!(!left.borders.contains(Borders::RIGHT));
         assert!(right.borders.contains(Borders::LEFT));
+    }
+
+    #[test]
+    fn disabled_outer_border_keeps_only_the_shared_dividers() {
+        let mut workspace = Workspace::test_new("test");
+        let root = workspace.tabs[0].root_pane;
+        let right_id = workspace.test_split(ratatui::layout::Direction::Horizontal);
+        workspace.tabs[0].layout.focus_pane(right_id);
+        let bottom_id = workspace.test_split(ratatui::layout::Direction::Vertical);
+
+        let infos = apply_pane_chrome(
+            workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
+            true,
+            false,
+            false,
+        );
+        let left = infos.iter().find(|info| info.id == root).unwrap();
+        let right = infos.iter().find(|info| info.id == right_id).unwrap();
+        let bottom = infos.iter().find(|info| info.id == bottom_id).unwrap();
+
+        // The leftmost pane touches nothing but the divider on its right, which
+        // its neighbour owns, so it keeps no border at all.
+        assert!(left.borders.is_empty());
+        // The right column keeps the divider towards the left column, and the
+        // lower pane keeps the one towards the pane above it.
+        assert_eq!(right.borders, Borders::LEFT);
+        assert_eq!(bottom.borders, Borders::LEFT | Borders::TOP);
+    }
+
+    #[test]
+    fn disabled_outer_border_drops_every_border_title() {
+        let mut app = AppState::test_new();
+        app.mode = Mode::Terminal;
+        app.pane_outer_border = false;
+        app.show_agent_labels_on_pane_borders = true;
+        let mut ws = Workspace::test_new("test");
+        let root = ws.tabs[0].root_pane;
+        // A vertical split leaves the lower pane with a top border, so the test
+        // proves titles are dropped even where there is still a border to
+        // carry them.
+        let bottom_id = ws.test_split(ratatui::layout::Direction::Vertical);
+        let area = Rect::new(0, 0, 40, 8);
+        app.view.terminal_area = area;
+        app.view.pane_infos =
+            apply_pane_chrome(ws.tabs[0].layout.panes(area), true, false, false);
+        assert!(app
+            .view
+            .pane_infos
+            .iter()
+            .any(|info| info.borders.contains(Borders::TOP)));
+
+        for pane_id in [root, bottom_id] {
+            let terminal_id = ws.tabs[0].panes[&pane_id].attached_terminal_id.clone();
+            let mut terminal_state = TerminalState::new(terminal_id.clone(), "/tmp".into());
+            terminal_state.set_manual_label("named".into());
+            app.terminals.insert(terminal_id, terminal_state);
+        }
+
+        let mut terminal =
+            ratatui::Terminal::new(ratatui::backend::TestBackend::new(40, 8)).unwrap();
+        terminal
+            .draw(|frame| render_view_pane_borders(&app, &ws, frame))
+            .unwrap();
+        let buffer = terminal.backend().buffer();
+        let rendered = (0..8)
+            .map(|y| (0..40).map(|x| buffer[(x, y)].symbol()).collect::<String>())
+            .collect::<String>();
+
+        assert!(!rendered.contains("named"), "rendered frame: {rendered:?}");
     }
 
     #[test]
@@ -1074,6 +1199,7 @@ mod tests {
             workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
             true,
             false,
+            true,
         );
         let top = infos.iter().find(|info| info.id == root).unwrap();
         let bottom = infos.iter().find(|info| info.id == bottom).unwrap();
@@ -1092,6 +1218,7 @@ mod tests {
 
         let infos = apply_pane_chrome(
             workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
+            true,
             true,
             true,
         );
@@ -1114,6 +1241,7 @@ mod tests {
             workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
             false,
             true,
+            true,
         );
         let left = infos.iter().find(|info| info.id == root).unwrap();
         let right = infos.iter().find(|info| info.id == right).unwrap();
@@ -1133,6 +1261,7 @@ mod tests {
             workspace.tabs[0].layout.panes(Rect::new(0, 0, 100, 20)),
             false,
             false,
+            true,
         );
 
         for info in infos {

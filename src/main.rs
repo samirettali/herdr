@@ -305,6 +305,12 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Draw borders around split panes.
 # pane_borders = true
 
+# Draw the border edges that face no other pane, that is the frame around the whole
+# pane area. False keeps only the dividers between panes, reclaiming a row at the top
+# and bottom and a column on each side, and drops every border title with it:
+# titles live inside a top border, and without the frame only some panes still have one.
+# pane_outer_border = true
+
 # Draw interactive scrollbars beside terminal panes.
 # Set false to reclaim the scrollbar column and keep it out of terminal-native selections.
 # pane_scrollbars = true
