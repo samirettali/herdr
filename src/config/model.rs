@@ -780,6 +780,33 @@ pub enum TabBarPositionConfig {
     Bottom,
 }
 
+const DEFAULT_TAB_LABEL_PADDING: u16 = 2;
+const DEFAULT_TAB_GAP: u16 = 1;
+const DEFAULT_TAB_MIN_WIDTH: u16 = 8;
+
+/// Geometry of the tab row. Widths are terminal columns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct TabBarConfig {
+    /// Blank columns kept on each side of a tab label. Default: 2.
+    pub label_padding: u16,
+    /// Blank columns between two tabs. Default: 1.
+    pub gap: u16,
+    /// Smallest width a tab may take, padding included. 0 lets short labels
+    /// shrink to `label_padding` on each side. Default: 8.
+    pub min_width: u16,
+}
+
+impl Default for TabBarConfig {
+    fn default() -> Self {
+        Self {
+            label_padding: DEFAULT_TAB_LABEL_PADDING,
+            gap: DEFAULT_TAB_GAP,
+            min_width: DEFAULT_TAB_MIN_WIDTH,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
@@ -824,6 +851,8 @@ pub struct UiConfig {
     pub hide_tab_bar_when_single_tab: bool,
     /// Desktop tab row placement. Default: top.
     pub tab_bar_position: TabBarPositionConfig,
+    /// Spacing of the tab row.
+    pub tab_bar: TabBarConfig,
     /// Agent sidebar ordering. Saved values are "spaces" or "priority". Default: "spaces".
     pub agent_panel_sort: AgentPanelSortConfig,
     /// Expanded sidebar row composition.
@@ -1028,6 +1057,7 @@ impl Default for UiConfig {
             show_agent_labels_on_pane_borders: false,
             hide_tab_bar_when_single_tab: false,
             tab_bar_position: TabBarPositionConfig::Top,
+            tab_bar: TabBarConfig::default(),
             agent_panel_sort: AgentPanelSortConfig::Spaces,
             sidebar: SidebarConfig::default(),
             accent: "cyan".into(),

@@ -350,6 +350,15 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # row_gap = 0
 # rows = [["state_icon", "workspace"], ["branch", "git_status"]]
 
+# Tab row spacing, in terminal columns. Keep this table after the [ui] scalars.
+# [ui.tab_bar]
+# Blank columns kept on each side of a tab label.
+# label_padding = 2
+# Blank columns between two tabs.
+# gap = 1
+# Smallest width a tab may take, padding included. 0 lets short labels shrink.
+# min_width = 8
+
 # Accent color for highlights, borders, and navigation UI.
 # Accepts: hex (#89b4fa), named colors (cyan, blue, magenta), or rgb(r,g,b)
 # accent = "cyan"
