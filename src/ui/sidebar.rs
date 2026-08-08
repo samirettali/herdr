@@ -1116,6 +1116,21 @@ fn resolved_token_spans(
             break;
         }
     }
+    // Spacers split whatever the real tokens left over, so the tokens after
+    // them end flush right. One column stays empty to mirror the gutter every
+    // row already has on the left.
+    let spacers = visible_indices
+        .iter()
+        .copied()
+        .filter(|index| matches!(resolved[*index].kind, ResolvedTokenKind::Spacer))
+        .collect::<Vec<_>>();
+    if !spacers.is_empty() {
+        let fill = remaining.saturating_sub(1);
+        for (position, index) in spacers.iter().copied().enumerate() {
+            budgets[index] = fill / spacers.len()
+                + usize::from(position + 1 == spacers.len()) * (fill % spacers.len());
+        }
+    }
     let mut spans = Vec::new();
     for (position, index) in visible_indices.iter().copied().enumerate() {
         let token = &resolved[index];
@@ -1173,6 +1188,9 @@ fn resolved_token_spans(
                         apply_token_style(Style::default().fg(p.red), token.style),
                     ));
                 }
+            }
+            ResolvedTokenKind::Spacer => {
+                spans.push(Span::raw(" ".repeat(budgets[index])));
             }
             ResolvedTokenKind::TerminalTitle(text) | ResolvedTokenKind::Custom(text) => {
                 spans.push(Span::styled(
@@ -1625,6 +1643,14 @@ mod tests {
             .to_string()
     }
 
+    /// Like [`row_text`], but keeps the trailing blanks a right-aligned row
+    /// leaves behind.
+    fn untrimmed_row_text(buffer: &ratatui::buffer::Buffer, row: u16, width: u16) -> String {
+        (0..width)
+            .map(|x| buffer[(x, row)].symbol())
+            .collect::<String>()
+    }
+
     fn find_symbol_x(buffer: &ratatui::buffer::Buffer, row: u16, width: u16, symbol: &str) -> u16 {
         (0..width)
             .find(|x| buffer[(*x, row)].symbol() == symbol)
@@ -2056,6 +2082,74 @@ rows = [[{ token = "git_status", fg = "#123456" }]]
         assert_eq!(metrics.max_offset_from_bottom, 0);
         assert_eq!(row_text(buffer, body.y, body.width), " pi");
         assert_eq!(row_text(buffer, body.y + 1, body.width), " claude");
+    }
+
+    #[test]
+    fn spacer_pushes_following_space_tokens_flush_right() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace", "spacer", "branch"]]
+"#,
+        )
+        .unwrap();
+        let mut app = crate::app::state::AppState::test_new();
+        app.sidebar_spaces = config.ui.sidebar.spaces;
+        let mut workspace = Workspace::test_new("one");
+        workspace.cached_git_branch = Some("main".into());
+        app.workspaces = vec![workspace];
+        app.ensure_test_terminals();
+        app.active = Some(0);
+        app.mode = Mode::Terminal;
+
+        let area = Rect::new(0, 0, 26, 20);
+        app.view.workspace_card_areas = compute_workspace_card_areas(&app, area);
+        let row = app.view.workspace_card_areas[0].rect.y;
+        let mut terminal = Terminal::new(TestBackend::new(26, 20)).unwrap();
+        terminal
+            .draw(|frame| render_sidebar(&app, &TerminalRuntimeRegistry::new(), frame, area))
+            .unwrap();
+        let width = app.view.workspace_card_areas[0].rect.width;
+        let text = untrimmed_row_text(terminal.backend().buffer(), row, width);
+
+        assert!(text.contains("one   "), "rendered row: {text:?}");
+        assert!(text.ends_with("main "), "rendered row: {text:?}");
+        assert!(!text.contains("· main"), "rendered row: {text:?}");
+    }
+
+    #[test]
+    fn spacer_pushes_following_agent_tokens_flush_right() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.agents]
+rows = [["state_icon", "workspace", "spacer", "tab"]]
+"#,
+        )
+        .unwrap();
+        let mut app = crate::app::state::AppState::test_new();
+        app.sidebar_agents = config.ui.sidebar.agents;
+        let mut workspace = Workspace::test_new("one");
+        let tab_idx = workspace.test_add_tab(Some("logs"));
+        let pane_id = workspace.tabs[tab_idx].root_pane;
+        app.workspaces = vec![workspace];
+        app.ensure_test_terminals();
+        let terminal_id = app.workspaces[0].tabs[tab_idx].panes[&pane_id]
+            .attached_terminal_id
+            .clone();
+        app.terminals.get_mut(&terminal_id).unwrap().detected_agent = Some(Agent::Pi);
+
+        let area = Rect::new(0, 0, 26, 20);
+        let mut terminal = Terminal::new(TestBackend::new(26, 20)).unwrap();
+        terminal
+            .draw(|frame| render_sidebar(&app, &TerminalRuntimeRegistry::new(), frame, area))
+            .unwrap();
+        let (_, agent_area) = expanded_sidebar_sections(area, app.sidebar_section_split);
+        let body = agent_panel_body_rect(agent_area, false);
+        let text = untrimmed_row_text(terminal.backend().buffer(), body.y, body.width);
+
+        assert!(text.contains("one   "), "rendered row: {text:?}");
+        assert!(text.ends_with("logs "), "rendered row: {text:?}");
+        assert!(!text.contains("· logs"), "rendered row: {text:?}");
     }
 
     #[test]

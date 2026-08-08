@@ -21,6 +21,7 @@ pub(super) enum ResolvedTokenKind {
     TerminalTitle(String),
     Branch(String),
     GitStatus { ahead: usize, behind: usize },
+    Spacer,
     Custom(String),
 }
 
@@ -73,6 +74,7 @@ pub(super) fn agent_rows(
                             .terminal_title_stripped
                             .clone()
                             .map(ResolvedTokenKind::TerminalTitle),
+                        AgentSidebarToken::Spacer => Some(ResolvedTokenKind::Spacer),
                         AgentSidebarToken::Custom(name) => entry
                             .tokens
                             .get(name)
@@ -83,7 +85,7 @@ pub(super) fn agent_rows(
                     Some(ResolvedToken::new(kind, style))
                 })
                 .collect::<Vec<_>>();
-            (!resolved.is_empty()).then_some(resolved)
+            has_content(&resolved).then_some(resolved)
         })
         .collect()
 }
@@ -126,6 +128,7 @@ pub(super) fn space_rows(
                             .filter(|(ahead, behind)| *ahead > 0 || *behind > 0)
                             .map(|(ahead, behind)| ResolvedTokenKind::GitStatus { ahead, behind }),
                         SpaceSidebarToken::GitStatus => None,
+                        SpaceSidebarToken::Spacer => Some(ResolvedTokenKind::Spacer),
                         SpaceSidebarToken::Custom(name) => context
                             .tokens
                             .get(name)
@@ -136,13 +139,25 @@ pub(super) fn space_rows(
                     Some(ResolvedToken::new(kind, style))
                 })
                 .collect::<Vec<_>>();
-            (!resolved.is_empty()).then_some(resolved)
+            has_content(&resolved).then_some(resolved)
         })
         .collect()
 }
 
+/// A row of nothing but spacers would render as blank padding, so it is elided
+/// like a row whose only tokens went missing.
+fn has_content(resolved: &[ResolvedToken]) -> bool {
+    resolved
+        .iter()
+        .any(|token| !matches!(token.kind, ResolvedTokenKind::Spacer))
+}
+
 pub(super) fn separator(previous: &ResolvedToken, current: &ResolvedToken) -> &'static str {
-    if matches!(previous.kind, ResolvedTokenKind::StateIcon)
+    if matches!(previous.kind, ResolvedTokenKind::Spacer)
+        || matches!(current.kind, ResolvedTokenKind::Spacer)
+    {
+        ""
+    } else if matches!(previous.kind, ResolvedTokenKind::StateIcon)
         || matches!(current.kind, ResolvedTokenKind::GitStatus { .. })
     {
         " "
