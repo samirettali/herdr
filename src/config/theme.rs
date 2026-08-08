@@ -119,6 +119,34 @@ pub struct CustomThemeColors {
     pub blue: Option<String>,
     pub teal: Option<String>,
     pub peach: Option<String>,
+    /// Background of the active space row in the sidebar. Defaults to `surface_dim`.
+    pub space_active_bg: Option<String>,
+    /// Foreground of the active space name in the sidebar. Defaults to `text`.
+    pub space_active_fg: Option<String>,
+    /// Sidebar dividers and section rules. Defaults to `surface_dim`.
+    pub sidebar_divider: Option<String>,
+    /// Foreground of inactive space names in the sidebar. Defaults to `subtext0`.
+    pub space_inactive_fg: Option<String>,
+    /// Background of the space under the cursor in navigate mode. Defaults to `surface0`.
+    pub space_selected_bg: Option<String>,
+    /// Foreground of the space under the cursor in navigate mode. Defaults to `text`.
+    pub space_selected_fg: Option<String>,
+    /// Background of the active tab. Defaults to `accent`.
+    pub tab_active_bg: Option<String>,
+    /// Foreground of the active tab label. Defaults to the panel contrast color.
+    pub tab_active_fg: Option<String>,
+    /// Background of inactive tabs and the tab bar scroll arrows. Defaults to `surface0`.
+    pub tab_inactive_bg: Option<String>,
+    /// Foreground of inactive tab labels. Defaults to `overlay1`.
+    pub tab_inactive_fg: Option<String>,
+    /// Background of the agent panel row of the focused pane. Defaults to `surface_dim`.
+    pub agent_active_bg: Option<String>,
+    /// Foreground of the agent panel name of the focused pane. Defaults to `text`.
+    pub agent_active_fg: Option<String>,
+    /// Background of the other agent panel rows. Unset leaves them unpainted.
+    pub agent_inactive_bg: Option<String>,
+    /// Foreground of the other agent panel names. Defaults to `subtext0`.
+    pub agent_inactive_fg: Option<String>,
 }
 
 /// Parse a color string into a ratatui Color.
