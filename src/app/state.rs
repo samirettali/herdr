@@ -1099,6 +1099,22 @@ pub struct ThemeRuntimeConfig {
     pub auto_switch: bool,
     pub custom: Option<crate::config::CustomThemeColors>,
     pub legacy_accent: Option<String>,
+    /// Sidebar-specific overrides, resolved once at config load.
+    /// `None` keeps the palette token the sidebar used before.
+    pub space_active_bg: Option<Color>,
+    pub space_active_fg: Option<Color>,
+    pub sidebar_divider: Option<Color>,
+    pub space_inactive_fg: Option<Color>,
+    pub space_selected_bg: Option<Color>,
+    pub space_selected_fg: Option<Color>,
+    pub tab_active_bg: Option<Color>,
+    pub tab_active_fg: Option<Color>,
+    pub tab_inactive_bg: Option<Color>,
+    pub tab_inactive_fg: Option<Color>,
+    pub agent_active_bg: Option<Color>,
+    pub agent_active_fg: Option<Color>,
+    pub agent_inactive_bg: Option<Color>,
+    pub agent_inactive_fg: Option<Color>,
 }
 
 pub struct SettingsState {
@@ -1574,6 +1590,101 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Background of the active space row. Falls back to the palette token
+    /// the sidebar used before these overrides existed.
+    pub(crate) fn space_active_bg(&self) -> Color {
+        self.theme_runtime
+            .space_active_bg
+            .unwrap_or(self.palette.surface_dim)
+    }
+
+    /// Foreground of the active space name.
+    pub(crate) fn space_active_fg(&self) -> Color {
+        self.theme_runtime
+            .space_active_fg
+            .unwrap_or(self.palette.text)
+    }
+
+    /// Sidebar dividers and section rules.
+    pub(crate) fn sidebar_divider(&self) -> Color {
+        self.theme_runtime
+            .sidebar_divider
+            .unwrap_or(self.palette.surface_dim)
+    }
+
+    /// Foreground of space names that are neither active nor selected.
+    pub(crate) fn space_inactive_fg(&self) -> Color {
+        self.theme_runtime
+            .space_inactive_fg
+            .unwrap_or(self.palette.subtext0)
+    }
+
+    /// Background of the space under the cursor in navigate mode.
+    pub(crate) fn space_selected_bg(&self) -> Color {
+        self.theme_runtime
+            .space_selected_bg
+            .unwrap_or(self.palette.surface0)
+    }
+
+    /// Foreground of the space under the cursor in navigate mode.
+    pub(crate) fn space_selected_fg(&self) -> Color {
+        self.theme_runtime
+            .space_selected_fg
+            .unwrap_or(self.palette.text)
+    }
+
+    /// Background of the active tab.
+    pub(crate) fn tab_active_bg(&self) -> Color {
+        self.theme_runtime.tab_active_bg.unwrap_or(self.palette.accent)
+    }
+
+    /// Foreground of the active tab label. `None` keeps the contrast color
+    /// derived from the active background.
+    pub(crate) fn tab_active_fg_override(&self) -> Option<Color> {
+        self.theme_runtime.tab_active_fg
+    }
+
+    /// Background of inactive tabs and the tab bar scroll arrows.
+    pub(crate) fn tab_inactive_bg(&self) -> Color {
+        self.theme_runtime
+            .tab_inactive_bg
+            .unwrap_or(self.palette.surface0)
+    }
+
+    /// Foreground of inactive tab labels. `None` keeps each tab's own previous
+    /// palette token: auto-named tabs were dimmer than renamed ones, and
+    /// collapsing both onto one default would flatten that distinction.
+    pub(crate) fn tab_inactive_fg_override(&self) -> Option<Color> {
+        self.theme_runtime.tab_inactive_fg
+    }
+
+    /// Background of the row of the agent in the focused pane.
+    pub(crate) fn agent_active_bg(&self) -> Color {
+        self.theme_runtime
+            .agent_active_bg
+            .unwrap_or(self.palette.surface_dim)
+    }
+
+    /// Foreground of the name of the agent in the focused pane.
+    pub(crate) fn agent_active_fg(&self) -> Color {
+        self.theme_runtime
+            .agent_active_fg
+            .unwrap_or(self.palette.text)
+    }
+
+    /// Background of the rows of every other agent. `None` leaves those rows
+    /// unpainted, the way they were before this token existed.
+    pub(crate) fn agent_inactive_bg(&self) -> Option<Color> {
+        self.theme_runtime.agent_inactive_bg
+    }
+
+    /// Foreground of the names of every other agent.
+    pub(crate) fn agent_inactive_fg(&self) -> Color {
+        self.theme_runtime
+            .agent_inactive_fg
+            .unwrap_or(self.palette.subtext0)
+    }
+
     pub(crate) fn mark_session_dirty(&mut self) {
         self.session_dirty = true;
     }
@@ -1894,6 +2005,20 @@ impl AppState {
                 auto_switch: false,
                 custom: None,
                 legacy_accent: None,
+                space_active_bg: None,
+                space_active_fg: None,
+                sidebar_divider: None,
+                space_inactive_fg: None,
+                space_selected_bg: None,
+                space_selected_fg: None,
+                tab_active_bg: None,
+                tab_active_fg: None,
+                tab_inactive_bg: None,
+                tab_inactive_fg: None,
+                agent_active_bg: None,
+                agent_active_fg: None,
+                agent_inactive_bg: None,
+                agent_inactive_fg: None,
             },
             host_terminal_appearance: None,
             host_terminal_appearance_explicit: false,

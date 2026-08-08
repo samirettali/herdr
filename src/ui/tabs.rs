@@ -285,11 +285,11 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
 
     if app.mouse_capture && app.view.tab_scroll_left_hit_area.width > 0 {
         let style = if can_scroll_left {
-            Style::default().fg(p.overlay1).bg(p.surface0)
+            Style::default().fg(p.overlay1).bg(app.tab_inactive_bg())
         } else {
             Style::default()
                 .fg(p.overlay0)
-                .bg(p.surface0)
+                .bg(app.tab_inactive_bg())
                 .add_modifier(Modifier::DIM)
         };
         frame.render_widget(
@@ -300,11 +300,11 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
 
     if app.mouse_capture && app.view.tab_scroll_right_hit_area.width > 0 {
         let style = if can_scroll_right {
-            Style::default().fg(p.overlay1).bg(p.surface0)
+            Style::default().fg(p.overlay1).bg(app.tab_inactive_bg())
         } else {
             Style::default()
                 .fg(p.overlay0)
-                .bg(p.surface0)
+                .bg(app.tab_inactive_bg())
                 .add_modifier(Modifier::DIM)
         };
         frame.render_widget(
@@ -322,7 +322,11 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
         }
         let active = idx == ws.active_tab;
         let style = if active {
-            let base = Style::default().fg(panel_contrast_fg(p)).bg(p.accent);
+            let active_bg = app.tab_active_bg();
+            let active_fg = app
+                .tab_active_fg_override()
+                .unwrap_or_else(|| panel_contrast_fg(p));
+            let base = Style::default().fg(active_fg).bg(active_bg);
             if tab.is_auto_named() {
                 base
             } else {
@@ -330,11 +334,13 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
             }
         } else if tab.is_auto_named() {
             Style::default()
-                .fg(p.overlay0)
-                .bg(p.surface0)
+                .fg(app.tab_inactive_fg_override().unwrap_or(p.overlay0))
+                .bg(app.tab_inactive_bg())
                 .add_modifier(Modifier::DIM)
         } else {
-            Style::default().fg(p.overlay1).bg(p.surface0)
+            Style::default()
+                .fg(app.tab_inactive_fg_override().unwrap_or(p.overlay1))
+                .bg(app.tab_inactive_bg())
         };
         let width = rect.width as usize;
         let name = tab_chrome_label(ws, idx);

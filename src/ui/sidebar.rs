@@ -760,7 +760,7 @@ pub(super) fn render_sidebar_collapsed(app: &AppState, frame: &mut Frame, area: 
     let sep_style = if is_navigating {
         Style::default().fg(p.accent)
     } else {
-        Style::default().fg(p.surface_dim)
+        Style::default().fg(app.sidebar_divider())
     };
     let sep_x = area.x + area.width.saturating_sub(1);
     let buf = frame.buffer_mut();
@@ -964,7 +964,7 @@ pub(super) fn render_sidebar(
     let sep_style = if is_navigating {
         Style::default().fg(p.accent)
     } else {
-        Style::default().fg(p.surface_dim)
+        Style::default().fg(app.sidebar_divider())
     };
 
     let sep_x = area.x + area.width.saturating_sub(1);
@@ -1224,16 +1224,19 @@ fn render_workspace_list(
         let selected = i == app.selected && is_navigating;
         let is_active = Some(i) == app.active;
         let is_dragged = dragged_ws_idx == Some(i);
-        let highlighted = selected || is_active || is_dragged;
+        // In navigate mode the cursor is the only marked row: the active space
+        // drops to the inactive styling so there is never a second highlight.
+        let show_active = is_active && !is_navigating;
+        let highlighted = selected || show_active || is_dragged;
         let (agg_state, agg_seen) = ws.aggregate_state(&app.terminals);
 
         if highlighted {
             let bg = if selected {
-                p.surface0
+                app.space_selected_bg()
             } else if is_dragged {
                 p.surface1
             } else {
-                p.surface_dim
+                app.space_active_bg()
             };
             let buf = frame.buffer_mut();
             for y in row_y..row_y + row_height {
@@ -1246,10 +1249,16 @@ fn render_workspace_list(
             }
         }
 
-        let name_style = if selected || is_active || is_dragged {
-            Style::default().fg(p.text).add_modifier(Modifier::BOLD)
+        let name_style = if selected {
+            Style::default()
+                .fg(app.space_selected_fg())
+                .add_modifier(Modifier::BOLD)
+        } else if show_active || is_dragged {
+            Style::default()
+                .fg(app.space_active_fg())
+                .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(p.subtext0)
+            Style::default().fg(app.space_inactive_fg())
         };
 
         let label = ws.display_name_from(&app.terminals, terminal_runtimes);
@@ -1415,7 +1424,10 @@ fn render_agent_detail(
 
     let sep_line = "─".repeat(area.width as usize);
     frame.render_widget(
-        Paragraph::new(Span::styled(&sep_line, Style::default().fg(p.surface_dim))),
+        Paragraph::new(Span::styled(
+            &sep_line,
+            Style::default().fg(app.sidebar_divider()),
+        )),
         Rect::new(area.x, area.y, area.width, 1),
     );
 
@@ -1474,14 +1486,19 @@ fn render_agent_detail(
 
         let is_active = app.is_active_pane(detail.ws_idx, detail.tab_idx, detail.pane_id);
         let row_style = if is_active {
-            Style::default().bg(p.surface_dim)
+            Style::default().bg(app.agent_active_bg())
         } else {
-            Style::default()
+            app.agent_inactive_bg()
+                .map_or_else(Style::default, |bg| Style::default().bg(bg))
         };
         let name_style = if is_active {
-            Style::default().fg(p.text).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(app.agent_active_fg())
+                .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(p.subtext0).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(app.agent_inactive_fg())
+                .add_modifier(Modifier::BOLD)
         };
         let status_style = if is_active {
             Style::default().fg(label_color)
@@ -1703,6 +1720,53 @@ rows = [[{ token = "workspace", bold = false }, { token = "agent", dim = false }
             .add_modifier
             .intersects(Modifier::BOLD | Modifier::DIM));
         assert_eq!(inactive.bg, Some(ratatui::style::Color::Reset));
+    }
+
+    #[test]
+    fn agent_tokens_style_the_focused_agent_apart_from_the_others() {
+        let mut app = crate::app::state::AppState::test_new();
+        app.workspaces = vec![Workspace::test_new("one"), Workspace::test_new("two")];
+        app.ensure_test_terminals();
+        app.active = Some(0);
+        app.mode = Mode::Terminal;
+        for ws_idx in 0..2 {
+            let pane_id = app.workspaces[ws_idx].tabs[0].root_pane;
+            let terminal_id = app.workspaces[ws_idx].tabs[0].panes[&pane_id]
+                .attached_terminal_id
+                .clone();
+            app.terminals.get_mut(&terminal_id).unwrap().detected_agent = Some(Agent::Pi);
+        }
+        let active_bg = ratatui::style::Color::Rgb(0x11, 0x22, 0x33);
+        let active_fg = ratatui::style::Color::Rgb(0x44, 0x55, 0x66);
+        let inactive_bg = ratatui::style::Color::Rgb(0x77, 0x88, 0x99);
+        let inactive_fg = ratatui::style::Color::Rgb(0xaa, 0xbb, 0xcc);
+        app.theme_runtime.agent_active_bg = Some(active_bg);
+        app.theme_runtime.agent_active_fg = Some(active_fg);
+        app.theme_runtime.agent_inactive_bg = Some(inactive_bg);
+        app.theme_runtime.agent_inactive_fg = Some(inactive_fg);
+
+        let area = Rect::new(0, 0, 26, 20);
+        let mut terminal = Terminal::new(TestBackend::new(26, 20)).unwrap();
+        terminal
+            .draw(|frame| render_sidebar(&app, &TerminalRuntimeRegistry::new(), frame, area))
+            .unwrap();
+        let buffer = terminal.backend().buffer();
+        let (_, agent_area) = expanded_sidebar_sections(area, app.sidebar_section_split);
+        let body = agent_panel_body_rect(agent_area, false);
+
+        let focused_row = body.y;
+        let other_row = body.y + 2;
+        assert!(row_text(buffer, focused_row, body.width).contains("one"));
+        assert!(row_text(buffer, other_row, body.width).contains("two"));
+
+        let focused =
+            buffer[(find_symbol_x(buffer, focused_row, body.width, "o"), focused_row)].style();
+        assert_eq!(focused.fg, Some(active_fg));
+        assert_eq!(focused.bg, Some(active_bg));
+
+        let other = buffer[(find_symbol_x(buffer, other_row, body.width, "t"), other_row)].style();
+        assert_eq!(other.fg, Some(inactive_fg));
+        assert_eq!(other.bg, Some(inactive_bg));
     }
 
     #[test]
