@@ -327,7 +327,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # agent_panel_sort = "spaces"
 
 # Expanded agent rows. Built-ins are state_icon, state_text, workspace, tab, pane, agent,
-# terminal_title, and terminal_title_stripped.
+# terminal_title, terminal_title_stripped, and spacer.
+# A spacer takes the leftover width of its row, so the tokens after it sit flush right:
+# rows = [["state_icon", "workspace", "spacer", "tab"], ["agent"]]
 # Custom values reported through pane metadata use a $name token.
 # A token occurrence may be styled with { token = "workspace", fg = "#89b4fa", bold = true, dim = false }.
 # Omitted style fields preserve the contextual default.
@@ -339,7 +341,8 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # [ui.sidebar.agents.rows_by_agent]
 # claude = [["state_icon", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
 
-# Expanded space rows. Built-ins are state_icon, state_text, workspace, branch, and git_status.
+# Expanded space rows. Built-ins are state_icon, state_text, workspace, branch, git_status,
+# and spacer, which takes the leftover width of its row to right-align what follows it.
 # Custom values reported through workspace metadata use a $name token, for example $jj_status.
 # Inline token styles accept strict #RGB/#RRGGBB foregrounds plus bold and dim booleans.
 # [ui.sidebar.spaces]

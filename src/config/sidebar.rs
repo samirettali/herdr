@@ -110,6 +110,9 @@ pub enum AgentSidebarToken {
     Agent,
     TerminalTitle,
     TerminalTitleStripped,
+    /// Eats the width the other tokens of the row left over, so whatever
+    /// follows it is pushed towards the right edge.
+    Spacer,
     Custom(String),
     Styled {
         token: Box<AgentSidebarToken>,
@@ -124,6 +127,8 @@ pub enum SpaceSidebarToken {
     Workspace,
     Branch,
     GitStatus,
+    /// See [`AgentSidebarToken::Spacer`].
+    Spacer,
     Custom(String),
     Styled {
         token: Box<SpaceSidebarToken>,
@@ -240,6 +245,7 @@ fn agent_token_name(token: &AgentSidebarToken) -> String {
         AgentSidebarToken::Agent => "agent".into(),
         AgentSidebarToken::TerminalTitle => "terminal_title".into(),
         AgentSidebarToken::TerminalTitleStripped => "terminal_title_stripped".into(),
+        AgentSidebarToken::Spacer => "spacer".into(),
         AgentSidebarToken::Custom(name) => format!("${name}"),
         AgentSidebarToken::Styled { token, .. } => agent_token_name(token),
     }
@@ -252,6 +258,7 @@ fn space_token_name(token: &SpaceSidebarToken) -> String {
         SpaceSidebarToken::Workspace => "workspace".into(),
         SpaceSidebarToken::Branch => "branch".into(),
         SpaceSidebarToken::GitStatus => "git_status".into(),
+        SpaceSidebarToken::Spacer => "spacer".into(),
         SpaceSidebarToken::Custom(name) => format!("${name}"),
         SpaceSidebarToken::Styled { token, .. } => space_token_name(token),
     }
@@ -294,6 +301,7 @@ impl<'de> Deserialize<'de> for AgentSidebarToken {
                 ("agent", Self::Agent),
                 ("terminal_title", Self::TerminalTitle),
                 ("terminal_title_stripped", Self::TerminalTitleStripped),
+                ("spacer", Self::Spacer),
             ],
         )
         .map_err(serde::de::Error::custom)?;
@@ -338,6 +346,7 @@ impl<'de> Deserialize<'de> for SpaceSidebarToken {
                 ("workspace", Self::Workspace),
                 ("branch", Self::Branch),
                 ("git_status", Self::GitStatus),
+                ("spacer", Self::Spacer),
             ],
         )
         .map_err(serde::de::Error::custom)?;
@@ -555,6 +564,38 @@ rows = [[{ token = "git_status", fg = "#ff00aa" }], [{ token = "$jj", bold = tru
         let (token, style) = config.ui.sidebar.spaces.rows[1][0].parts();
         assert_eq!(token, &SpaceSidebarToken::Custom("jj".into()));
         assert_eq!(style.bold, Some(true));
+    }
+
+    #[test]
+    fn parses_spacer_tokens_in_both_sections() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.agents]
+rows = [["state_icon", "workspace", "spacer", "tab"]]
+
+[ui.sidebar.spaces]
+rows = [["branch", "spacer", "git_status"]]
+"#,
+        )
+        .expect("spacer config");
+
+        assert_eq!(
+            config.ui.sidebar.agents.rows[0],
+            vec![
+                AgentSidebarToken::StateIcon,
+                AgentSidebarToken::Workspace,
+                AgentSidebarToken::Spacer,
+                AgentSidebarToken::Tab,
+            ]
+        );
+        assert_eq!(
+            config.ui.sidebar.spaces.rows[0],
+            vec![
+                SpaceSidebarToken::Branch,
+                SpaceSidebarToken::Spacer,
+                SpaceSidebarToken::GitStatus,
+            ]
+        );
     }
 
     #[test]
