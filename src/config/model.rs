@@ -845,6 +845,33 @@ pub enum TabBarPositionConfig {
     Bottom,
 }
 
+const DEFAULT_TAB_LABEL_PADDING: u16 = 2;
+const DEFAULT_TAB_GAP: u16 = 1;
+pub(crate) const DEFAULT_TAB_MIN_WIDTH: u16 = 8;
+
+/// Geometry of the tab row. Widths are terminal columns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct TabBarConfig {
+    /// Blank columns kept on each side of a tab label. Default: 2.
+    pub label_padding: u16,
+    /// Blank columns between two tabs. Default: 1.
+    pub gap: u16,
+    /// Smallest width a tab may take, padding included. 0 lets short labels
+    /// shrink to `label_padding` on each side. Default: 8.
+    pub min_width: u16,
+}
+
+impl Default for TabBarConfig {
+    fn default() -> Self {
+        Self {
+            label_padding: DEFAULT_TAB_LABEL_PADDING,
+            gap: DEFAULT_TAB_GAP,
+            min_width: DEFAULT_TAB_MIN_WIDTH,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
@@ -898,6 +925,8 @@ pub struct UiConfig {
     /// Format for the outer terminal window title. Empty leaves the title alone.
     /// Default: "{hostname}: {workspace}".
     pub window_title: String,
+    /// Spacing of the tab row.
+    pub tab_bar: TabBarConfig,
     /// Agent sidebar ordering. Saved values are "spaces" or "priority". Default: "spaces".
     pub agent_panel_sort: AgentPanelSortConfig,
     /// Retired setting that Herdr wrote before the workspace filter was removed.
@@ -1126,6 +1155,7 @@ impl Default for UiConfig {
             tab_bar_right: Vec::new(),
             tab_bar_right_separator: " ".into(),
             window_title: super::window_title::default_window_title(),
+            tab_bar: TabBarConfig::default(),
             agent_panel_sort: AgentPanelSortConfig::Spaces,
             _legacy_agent_panel_scope: None,
             status_indicators: StatusIndicatorStyle::Dots,

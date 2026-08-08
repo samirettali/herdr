@@ -23,7 +23,7 @@ pub use self::{
     model::{
         validated_sidebar_bounds, AgentPanelSortConfig, Config, ConfigReloadReport,
         ConfigReloadStatus, HostCursorModeConfig, NewTerminalCwdConfig, ShellModeConfig,
-        SidebarCollapsedModeConfig, StatusIndicatorStyle, TabBarPositionConfig,
+        SidebarCollapsedModeConfig, StatusIndicatorStyle, TabBarConfig, TabBarPositionConfig,
         ToastClipboardPosition, ToastConfig, ToastDelivery, ToastHerdrPosition,
         UpdateChannelConfig, MAX_TOAST_DELAY_SECONDS,
     },
@@ -40,6 +40,7 @@ pub use self::{
 pub(crate) use self::keybinds::parse_key_combo;
 pub(crate) use self::{
     io::upsert_top_level_bool,
+    model::DEFAULT_TAB_MIN_WIDTH,
     tab_bar::{
         parse_tab_bar_datetime_format, tab_bar_right_diagnostics,
         MAX_TAB_BAR_COMMAND_INTERVAL_SECONDS, MAX_TAB_BAR_COMMAND_TIMEOUT_SECONDS,
