@@ -438,7 +438,10 @@ pub fn render_with_runtime_registry(
             render_mobile_panel(app, terminal_runtimes, frame, frame.area())
         }
         Mode::Navigate => render_navigate_overlay(app, frame, mode_bar_area),
-        Mode::Prefix => render_prefix_overlay(app, frame, mode_bar_area),
+        // Prefix mode lasts one keystroke, so its hint bar flashes over the row
+        // below on every press. Off leaves that row alone.
+        Mode::Prefix if app.prefix_hint => render_prefix_overlay(app, frame, mode_bar_area),
+        Mode::Prefix => {}
         Mode::Copy => render_copy_mode_overlay(app, frame, mode_bar_area),
         Mode::Resize => render_resize_overlay(app, frame, mode_bar_area),
         Mode::ConfirmClose => {
@@ -1426,6 +1429,35 @@ mod tests {
             .map(|cell| cell.symbol())
             .collect::<String>();
         assert!(rendered.contains("PREFIX"));
+    }
+
+    #[test]
+    fn prefix_hint_off_leaves_the_row_below_untouched() {
+        let mut app = crate::app::state::AppState::test_new();
+        app.mode = Mode::Prefix;
+        app.prefix_hint = false;
+        app.workspaces = vec![crate::workspace::Workspace::test_new("one")];
+        app.active = Some(0);
+        let area = ratatui::layout::Rect::new(0, 0, 60, 8);
+        let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(60, 8))
+            .expect("test terminal");
+
+        compute_view(&mut app, area);
+        terminal
+            .draw(|frame| render(&app, frame))
+            .expect("draw the frame");
+        let rendered = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+
+        // Nothing of the hint bar reaches the screen, neither the badge nor the
+        // key list it carries.
+        assert!(!rendered.contains("PREFIX"), "rendered frame: {rendered:?}");
+        assert!(!rendered.contains("send prefix"), "rendered frame: {rendered:?}");
     }
 
     #[test]

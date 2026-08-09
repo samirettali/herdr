@@ -653,6 +653,7 @@ impl App {
             confirm_close: config.ui.confirm_close,
             prompt_new_tab_name: config.ui.prompt_new_tab_name,
             prompt_new_workspace_name: config.ui.prompt_new_workspace_name,
+            prefix_hint: config.ui.prefix_hint,
             pane_borders: config.ui.pane_borders,
             pane_outer_border: config.ui.pane_outer_border,
             pane_scrollbars: config.ui.pane_scrollbars,
@@ -1462,6 +1463,7 @@ impl App {
                 self.state.confirm_close = config.ui.confirm_close;
                 self.state.prompt_new_tab_name = config.ui.prompt_new_tab_name;
                 self.state.prompt_new_workspace_name = config.ui.prompt_new_workspace_name;
+                self.state.prefix_hint = config.ui.prefix_hint;
                 self.state.pane_borders = config.ui.pane_borders;
                 self.state.pane_outer_border = config.ui.pane_outer_border;
                 self.state.pane_scrollbars = config.ui.pane_scrollbars;

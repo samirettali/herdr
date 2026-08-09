@@ -857,6 +857,9 @@ pub struct UiConfig {
     pub prompt_new_tab_name: bool,
     /// Ask for a workspace name before interactive creation. Default: false.
     pub prompt_new_workspace_name: bool,
+    /// Draw the one-line hint bar while prefix mode is armed. False leaves the
+    /// row it would cover — usually the tab bar — untouched. Default: true.
+    pub prefix_hint: bool,
     /// Draw borders around split panes. Default: true.
     pub pane_borders: bool,
     /// Draw the border edges that face no other pane, that is the frame around
@@ -1073,6 +1076,7 @@ impl Default for UiConfig {
             confirm_close: true,
             prompt_new_tab_name: true,
             prompt_new_workspace_name: false,
+            prefix_hint: true,
             pane_borders: true,
             pane_outer_border: true,
             pane_scrollbars: true,
