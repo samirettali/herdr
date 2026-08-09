@@ -24,7 +24,7 @@
 
 ---
 
-> **This is a fork.** Branch `patched` carries five commits on top of the `v0.8.0`
+> **This is a fork.** Branch `patched` carries six commits on top of the `v0.8.0`
 > tag, described in [fork changes](#fork-changes). Everything else is upstream
 > [herdrdev/herdr](https://github.com/herdrdev/herdr).
 
@@ -46,7 +46,7 @@ https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 ## fork changes
 
-Five commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
+Six commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
 dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
 `config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
 becomes symmetric (same total width, see below).
@@ -97,6 +97,37 @@ rows = [["state_icon", "workspace", "spacer", "tab"], ["agent"]]
 Several spacers in one row split the slack evenly, which gives centring as well. In a sidebar
 too narrow for the row, spacers collapse to nothing and the layout falls back to upstream
 behaviour.
+
+### Tab labels from tokens
+
+A tab was labelled with its `custom_name` or, failing that, its number — there was no way to
+show what it is actually running. The label is now composed the way sidebar rows are:
+
+```toml
+[ui.tab_bar]
+label = ["index", { text = " " }, "name"]        # the default
+# label = ["index", { text = ":" }, "agent"]
+# label = ["agent", { text = " · " }, "terminal_title_stripped"]
+```
+
+Built-ins are `index`, `name`, `agent`, `terminal_title` and `terminal_title_stripped`; pane
+metadata reported through `herdr pane report-metadata` is available as `$name`. Values are read
+from the tab's **focused pane** — the one you would be looking at if you switched to that tab.
+
+Two rules make the result predictable:
+
+- **A token with no value is dropped**, so an unnamed tab or a pane with no agent closes the
+  label up instead of leaving a gap.
+- **There is no implicit separator.** `{ text = "…" }` puts one exactly where you want it, and a
+  literal is dropped unless it sits between two tokens that resolved to something — an unnamed
+  tab with `["index", { text = ":" }, "name"]` reads `1`, not `1:`.
+
+The zoom marker stays appended outside the label: it is state about the pane rather than a
+field of the tab, and losing it would hide that the tab is showing one pane out of several.
+
+Note that the default gains the number on named tabs, where vanilla showed the name alone. And
+with long labels `min_width` stops mattering while overflow becomes the normal case, so the
+scroll arrows earn their keep.
 
 ### Tab row spacing
 

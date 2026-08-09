@@ -304,7 +304,9 @@ mod tests {
         assert_eq!(frame.hyperlinks, vec![uri.to_owned()]);
         assert_eq!(
             frame_digest(&frame),
-            "a7c21fa42305a41231c7ae254f264f6ef923f46301d8fc4cd35ab6dfdd651b6b"
+            // Differs from upstream's digest: the default tab label of this
+            // fork prepends the tab index.
+            "1ddd9408be1ee126a3453fd37c721642f3ed56a88c0e637a091f9681558cea78"
         );
     }
 

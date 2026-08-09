@@ -120,6 +120,119 @@ pub enum AgentSidebarToken {
     },
 }
 
+const MAX_TAB_LABEL_TOKENS: usize = 8;
+const MAX_TAB_LABEL_TEXT_LEN: usize = 8;
+
+/// A piece of a tab's label. Unlike the sidebar's tokens these carry no styling:
+/// the whole label takes the tab's active/inactive colours, and a token painted
+/// against that would fight it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TabBarToken {
+    /// The tab's 1-based number.
+    Index,
+    /// The name set with `rename_tab`. Elided when the tab has none.
+    Name,
+    /// Values read from the tab's active pane. Elided when it has no agent.
+    Agent,
+    TerminalTitle,
+    TerminalTitleStripped,
+    Custom(String),
+    /// Literal characters, so the separator is the user's choice rather than
+    /// something baked in: `{ text = " · " }`.
+    Text(String),
+}
+
+impl TabBarToken {
+    /// Literals are punctuation between values, not values themselves, so they
+    /// only survive between two resolved tokens.
+    pub(crate) fn is_text(&self) -> bool {
+        matches!(self, Self::Text(_))
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawTabBarText {
+    text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum RawTabBarToken {
+    Named(String),
+    Text(RawTabBarText),
+}
+
+impl From<String> for TabBarToken {
+    fn from(value: String) -> Self {
+        Self::Custom(value)
+    }
+}
+
+impl<'de> Deserialize<'de> for TabBarToken {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match RawTabBarToken::deserialize(deserializer)? {
+            RawTabBarToken::Text(literal) => {
+                if literal.text.chars().count() > MAX_TAB_LABEL_TEXT_LEN {
+                    return Err(serde::de::Error::custom(format!(
+                        "tab label text may be at most {MAX_TAB_LABEL_TEXT_LEN} characters"
+                    )));
+                }
+                Ok(Self::Text(literal.text))
+            }
+            RawTabBarToken::Named(value) => parse_sidebar_token(
+                value,
+                &[
+                    ("index", Self::Index),
+                    ("name", Self::Name),
+                    ("agent", Self::Agent),
+                    ("terminal_title", Self::TerminalTitle),
+                    ("terminal_title_stripped", Self::TerminalTitleStripped),
+                ],
+            )
+            .map_err(serde::de::Error::custom),
+        }
+    }
+}
+
+impl Serialize for TabBarToken {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Text(text) => {
+                use serde::ser::SerializeMap;
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("text", text)?;
+                map.end()
+            }
+            Self::Index => serializer.serialize_str("index"),
+            Self::Name => serializer.serialize_str("name"),
+            Self::Agent => serializer.serialize_str("agent"),
+            Self::TerminalTitle => serializer.serialize_str("terminal_title"),
+            Self::TerminalTitleStripped => serializer.serialize_str("terminal_title_stripped"),
+            Self::Custom(name) => serializer.serialize_str(&format!("${name}")),
+        }
+    }
+}
+
+pub(crate) fn deserialize_tab_label<'de, D>(deserializer: D) -> Result<Vec<TabBarToken>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let tokens = Vec::<TabBarToken>::deserialize(deserializer)?;
+    if tokens.len() > MAX_TAB_LABEL_TOKENS {
+        return Err(serde::de::Error::custom(format!(
+            "a tab label may contain at most {MAX_TAB_LABEL_TOKENS} tokens"
+        )));
+    }
+    Ok(tokens)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpaceSidebarToken {
     StateIcon,

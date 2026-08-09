@@ -388,8 +388,14 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # row_gap = 0
 # rows = [["state_icon", "workspace"], ["branch", "git_status"]]
 
-# Tab row spacing, in terminal columns. Keep this table after the [ui] scalars.
+# Tab row label and spacing. Keep this table after the [ui] scalars.
 # [ui.tab_bar]
+# What a tab is labelled with. Built-ins are index, name, agent, terminal_title and
+# terminal_title_stripped; pane metadata uses a $name token. Values come from the tab's
+# focused pane, and a token with no value is dropped.
+# There is no implicit separator: { text = "…" } puts one where you want it, and a literal
+# is dropped unless it sits between two tokens that resolved to something.
+# label = ["index", { text = " " }, "name"]
 # Blank columns kept on each side of a tab label.
 # label_padding = 2
 # Blank columns between two tabs.

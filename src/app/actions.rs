@@ -1751,8 +1751,10 @@ impl AppState {
             return;
         };
 
+        let labels = crate::ui::tab_bar_labels(self, ws);
         let layout = crate::ui::compute_tab_bar_view(
             ws,
+            &labels,
             crate::ui::tab_bar_content_area(self, area),
             self.tab_scroll,
             self.tab_scroll_follow_active,
