@@ -531,7 +531,11 @@ fn restore_tab(
         let pending_native_agent_restore = if was_imported {
             None
         } else {
-            startup.restore_plan.clone()
+            startup.restore_plan.clone().or_else(|| {
+                saved_pane
+                    .and_then(|pane| pane.restore_command.clone())
+                    .and_then(command_restore_plan)
+            })
         };
         if let Some(plan) = pending_native_agent_restore {
             let terminal_id = TerminalId::alloc();
@@ -734,6 +738,22 @@ fn restore_tab(
         )),
         failed_imports,
     )
+}
+
+/// A saved restore command reuses the deferred agent-resume machinery: the job
+/// is the same, run this argv in a shell spawned once the pane has a size. The
+/// dedupe key is per argv occurrence rather than per session, so two panes
+/// running the same command both come back.
+fn command_restore_plan(argv: Vec<String>) -> Option<crate::agent_resume::AgentResumePlan> {
+    let executable = std::path::Path::new(argv.first()?)
+        .file_name()
+        .and_then(|name| name.to_str())?
+        .to_string();
+    Some(crate::agent_resume::AgentResumePlan {
+        dedupe_key: format!("herdr:restore-command\0{}", argv.join("\0")),
+        agent: executable,
+        argv,
+    })
 }
 
 fn pane_restore_startup<'a>(
@@ -1035,6 +1055,26 @@ mod tests {
     }
 
     #[test]
+    fn command_restore_plan_reruns_the_saved_argv_per_pane() {
+        let plan = command_restore_plan(vec!["/run/current-system/sw/bin/nvim".into()])
+            .expect("an absolute executable should still yield a plan");
+
+        assert_eq!(plan.agent, "nvim");
+        assert_eq!(plan.argv, vec!["/run/current-system/sw/bin/nvim"]);
+
+        // The key is derived from the argv, not from a session, and the restore
+        // path never runs these plans through a dedupe set.
+        assert_ne!(
+            plan.dedupe_key,
+            command_restore_plan(vec!["nvim".into(), "src".into()])
+                .unwrap()
+                .dedupe_key
+        );
+
+        assert!(command_restore_plan(Vec::new()).is_none());
+    }
+
+    #[test]
     fn restore_plan_selection_suppresses_duplicates() {
         let pi_session_path = test_session_path("pi-session.jsonl");
         let session = super::super::snapshot::PaneAgentSessionSnapshot {
@@ -1198,6 +1238,7 @@ mod tests {
                                 value: "opencode-session".into(),
                             }),
                             launch_argv: None,
+                            restore_command: None,
                         },
                     )]),
                     zoomed: false,
@@ -1279,6 +1320,7 @@ mod tests {
                                 managed_agent_kind: None,
                                 agent_session: None,
                                 launch_argv: None,
+                                restore_command: None,
                             },
                         ),
                         (
@@ -1290,6 +1332,7 @@ mod tests {
                                 managed_agent_kind: None,
                                 agent_session: None,
                                 launch_argv: None,
+                                restore_command: None,
                             },
                         ),
                     ]),
@@ -1343,6 +1386,7 @@ mod tests {
                     managed_agent_kind: None,
                     agent_session: None,
                     launch_argv: None,
+                    restore_command: None,
                 },
             )
         };
@@ -1358,6 +1402,7 @@ mod tests {
                 value: "codex-session".into(),
             }),
             launch_argv: None,
+            restore_command: None,
         };
         let snapshot = SessionSnapshot {
             version: super::super::snapshot::SNAPSHOT_VERSION,
@@ -1509,6 +1554,7 @@ mod tests {
                                 value: "codex-session".into(),
                             }),
                             launch_argv: None,
+                            restore_command: None,
                         },
                     )]),
                     zoomed: false,
@@ -1670,6 +1716,7 @@ mod tests {
                 managed_agent_kind: None,
                 agent_session: None,
                 launch_argv: None,
+                restore_command: None,
             },
         );
         let history = SessionHistorySnapshot {

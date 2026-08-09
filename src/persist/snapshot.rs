@@ -107,6 +107,10 @@ pub struct PaneSnapshot {
     pub agent_session: Option<PaneAgentSessionSnapshot>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub launch_argv: Option<Vec<String>>,
+    /// Command the pane re-runs on restore instead of coming back as a bare
+    /// shell. Only ever holds executables listed in `session.restore_commands`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub restore_command: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -261,12 +265,15 @@ pub fn capture(
     sidebar_width: u16,
     sidebar_section_split: f32,
     collapsed_space_keys: std::collections::HashSet<String>,
+    restore_commands: &[String],
 ) -> SessionSnapshot {
     SessionSnapshot {
         version: SNAPSHOT_VERSION,
         workspaces: workspaces
             .iter()
-            .map(|workspace| capture_workspace(workspace, terminals, terminal_runtimes))
+            .map(|workspace| {
+                capture_workspace(workspace, terminals, terminal_runtimes, restore_commands)
+            })
             .collect(),
         active,
         selected,
@@ -283,6 +290,7 @@ fn capture_workspace(
         crate::terminal::TerminalState,
     >,
     terminal_runtimes: &TerminalRuntimeRegistry,
+    restore_commands: &[String],
 ) -> WorkspaceSnapshot {
     WorkspaceSnapshot {
         id: Some(ws.id.clone()),
@@ -302,10 +310,41 @@ fn capture_workspace(
         tabs: ws
             .tabs
             .iter()
-            .map(|tab| capture_tab(tab, terminals, terminal_runtimes))
+            .map(|tab| capture_tab(tab, terminals, terminal_runtimes, restore_commands))
             .collect(),
         active_tab: ws.active_tab,
     }
+}
+
+/// The pane's foreground command, when its executable is one the user listed in
+/// `session.restore_commands`. Only the process group leader is inspected: it is
+/// the command the user typed, and its argv is already collected for agent
+/// detection.
+fn allowed_foreground_argv(
+    runtime: &crate::terminal::TerminalRuntime,
+    restore_commands: &[String],
+) -> Option<Vec<String>> {
+    if restore_commands.is_empty() {
+        return None;
+    }
+    let job = crate::detect::foreground_job(runtime.child_pid()?)?;
+    let leader = job
+        .processes
+        .iter()
+        .find(|process| process.pid == job.process_group_id)?;
+    allowed_argv(leader.argv.as_deref()?, restore_commands)
+}
+
+/// Matching is on the executable name alone, so an absolute path or a wrapper in
+/// the store still matches a bare `nvim` in the config.
+fn allowed_argv(argv: &[String], restore_commands: &[String]) -> Option<Vec<String>> {
+    let executable = std::path::Path::new(argv.first()?)
+        .file_name()
+        .and_then(|name| name.to_str())?;
+    restore_commands
+        .iter()
+        .any(|allowed| allowed == executable)
+        .then(|| argv.to_vec())
 }
 
 fn capture_tab(
@@ -315,6 +354,7 @@ fn capture_tab(
         crate::terminal::TerminalState,
     >,
     terminal_runtimes: &TerminalRuntimeRegistry,
+    restore_commands: &[String],
 ) -> TabSnapshot {
     let mut panes = HashMap::new();
     for id in tab.panes.keys() {
@@ -338,6 +378,11 @@ fn capture_tab(
             })
             .unwrap_or_default();
         let launch_argv = terminal.and_then(|terminal| terminal.launch_argv.clone());
+        let restore_command = tab
+            .panes
+            .get(id)
+            .and_then(|pane| terminal_runtimes.get(&pane.attached_terminal_id))
+            .and_then(|runtime| allowed_foreground_argv(runtime, restore_commands));
         let agent_session = terminal.and_then(|terminal| {
             if let Some(authority) = terminal.hook_authority.as_ref() {
                 if let Some(session_ref) = authority.session_ref.as_ref() {
@@ -368,6 +413,7 @@ fn capture_tab(
                 managed_agent_kind,
                 agent_session,
                 launch_argv,
+                restore_command,
             },
         );
     }
@@ -488,6 +534,23 @@ mod tests {
     use crate::layout::NavDirection;
     use crate::workspace::Workspace;
 
+    #[test]
+    fn allowed_argv_matches_on_the_executable_name_only() {
+        let allowed = vec!["nvim".to_string(), "lazygit".to_string()];
+
+        assert_eq!(
+            allowed_argv(&["nvim".into(), "src/main.rs".into()], &allowed),
+            Some(vec!["nvim".to_string(), "src/main.rs".to_string()])
+        );
+        assert_eq!(
+            allowed_argv(&["/nix/store/abc-neovim/bin/nvim".into()], &allowed),
+            Some(vec!["/nix/store/abc-neovim/bin/nvim".to_string()])
+        );
+        assert_eq!(allowed_argv(&["ssh".into(), "host".into()], &allowed), None);
+        assert_eq!(allowed_argv(&["nvim".into()], &[]), None);
+        assert_eq!(allowed_argv(&[], &allowed), None);
+    }
+
     fn session_fixture(name: &str) -> &'static str {
         match name {
             "current-herdr" => {
@@ -541,6 +604,7 @@ mod tests {
             state.sidebar_width,
             state.sidebar_section_split,
             state.collapsed_space_keys.clone(),
+            &state.restore_commands,
         )
     }
 
@@ -648,6 +712,7 @@ mod tests {
                 managed_agent_kind: None,
                 agent_session: None,
                 launch_argv: None,
+                restore_command: None,
             },
         );
         panes.insert(
@@ -659,6 +724,7 @@ mod tests {
                 managed_agent_kind: None,
                 agent_session: None,
                 launch_argv: None,
+                restore_command: None,
             },
         );
 
@@ -1207,6 +1273,7 @@ mod tests {
                 managed_agent_kind: None,
                 agent_session: None,
                 launch_argv: None,
+                restore_command: None,
             },
         );
         panes.insert(
@@ -1220,6 +1287,7 @@ mod tests {
                 managed_agent_kind: None,
                 agent_session: None,
                 launch_argv: None,
+                restore_command: None,
             },
         );
 

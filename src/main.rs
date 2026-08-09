@@ -403,6 +403,12 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # a Herdr server restart. Requires official integrations that report session refs.
 # resume_agents_on_restore = true
 
+# Executable names a restored pane re-runs when they were its foreground process.
+# Everything else comes back as a bare shell in the saved directory, because
+# re-running an arbitrary command is not always safe. This restarts the program,
+# not its state: nvim reopens empty unless a session plugin restores it.
+# restore_commands = ["nvim", "lazygit"]
+
 [remote]
 # Whether herdr manages the ssh config used for `herdr --remote`.
 # When true (default), herdr runs remote ssh through a generated config that
