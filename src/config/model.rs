@@ -851,6 +851,30 @@ pub enum TabBarPositionConfig {
     Bottom,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SidebarPositionConfig {
+    #[default]
+    Left,
+    Right,
+}
+
+impl SidebarPositionConfig {
+    pub fn is_right(self) -> bool {
+        matches!(self, Self::Right)
+    }
+
+    /// The column of the sidebar's divider: the edge it shares with the panes,
+    /// which is also the one you drag to resize it.
+    pub fn divider_x(self, sidebar: ratatui::layout::Rect) -> u16 {
+        if self.is_right() {
+            sidebar.x
+        } else {
+            sidebar.x + sidebar.width.saturating_sub(1)
+        }
+    }
+}
+
 const DEFAULT_TAB_LABEL_PADDING: u16 = 2;
 const DEFAULT_TAB_GAP: u16 = 1;
 pub(crate) const DEFAULT_TAB_MIN_WIDTH: u16 = 8;
@@ -902,6 +926,8 @@ pub struct UiConfig {
     pub sidebar_start_collapsed: bool,
     /// Collapsed sidebar presentation. Default: compact.
     pub sidebar_collapsed_mode: SidebarCollapsedModeConfig,
+    /// Which side the sidebar sits on. Default: left.
+    pub sidebar_position: SidebarPositionConfig,
     /// Terminal width at or below which Herdr uses the mobile single-column layout. Default: 64.
     pub mobile_width_threshold: u16,
     /// Capture mouse input for Herdr's mouse UI. Default: true.
@@ -1156,6 +1182,7 @@ impl Default for UiConfig {
             sidebar_max_width: 36,
             sidebar_start_collapsed: false,
             sidebar_collapsed_mode: SidebarCollapsedModeConfig::Compact,
+            sidebar_position: SidebarPositionConfig::Left,
             mobile_width_threshold: DEFAULT_MOBILE_WIDTH_THRESHOLD,
             mouse_capture: true,
             copy_on_select: true,

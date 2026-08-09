@@ -24,7 +24,7 @@
 
 ---
 
-> **This is a fork.** Branch `patched` carries seven commits on top of the `v0.8.0`
+> **This is a fork.** Branch `patched` carries eight commits on top of the `v0.8.0`
 > tag, described in [fork changes](#fork-changes). Everything else is upstream
 > [herdrdev/herdr](https://github.com/herdrdev/herdr).
 
@@ -46,7 +46,7 @@ https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 ## fork changes
 
-Seven commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
+Eight commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
 dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
 `config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
 becomes symmetric (same total width, see below).
@@ -143,6 +143,18 @@ min_width = 8       # smallest tab width, padding included; 0 lets short labels 
 The padding default of 2 is the one intentional change of appearance: upstream spends one
 column to the left of the label and three to the right, which puts the label visibly off
 centre inside a coloured tab. The total width is unchanged.
+
+### The sidebar can sit on the right
+
+```toml
+[ui]
+sidebar_position = "right"
+```
+
+The divider, the collapse toggle and the column you drag to resize all follow the sidebar, so
+on the right it grows leftwards and the toggle stays next to the panes rather than against the
+screen edge. Both the renderer and the mouse hit test ask the same
+`SidebarPositionConfig::divider_x`, so they cannot disagree about where the divider is.
 
 ### The prefix hint bar is optional
 

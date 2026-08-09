@@ -234,8 +234,15 @@ fn compute_view_internal(
             .clamp(app.sidebar_min_width, app.sidebar_max_width)
     };
 
-    let [sidebar_area, main_area] =
-        Layout::horizontal([Constraint::Length(sidebar_w), Constraint::Min(1)]).areas(area);
+    let (sidebar_area, main_area) = if app.sidebar_position.is_right() {
+        let [main_area, sidebar_area] =
+            Layout::horizontal([Constraint::Min(1), Constraint::Length(sidebar_w)]).areas(area);
+        (sidebar_area, main_area)
+    } else {
+        let [sidebar_area, main_area] =
+            Layout::horizontal([Constraint::Length(sidebar_w), Constraint::Min(1)]).areas(area);
+        (sidebar_area, main_area)
+    };
 
     let (tab_bar_rect, terminal_area) = app
         .active
@@ -245,7 +252,8 @@ fn compute_view_internal(
 
     if !app.sidebar_collapsed {
         app.workspace_scroll = normalized_workspace_scroll(app, sidebar_area, app.workspace_scroll);
-        let (_, detail_area) = expanded_sidebar_sections(sidebar_area, app.sidebar_section_split);
+        let (_, detail_area) =
+            expanded_sidebar_sections(sidebar_area, app.sidebar_section_split, app.sidebar_position);
         let max_agent_scroll = agent_panel_scroll_metrics(app, detail_area).max_offset_from_bottom;
         app.agent_panel_scroll = app.agent_panel_scroll.min(max_agent_scroll);
     } else {
@@ -1036,6 +1044,31 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_position_right_puts_the_sidebar_after_the_panes() {
+        let mut app = crate::app::state::AppState::test_new();
+        app.workspaces = vec![Workspace::test_new("one")];
+        app.active = Some(0);
+        app.selected = 0;
+        app.mode = Mode::Terminal;
+        app.sidebar_position = crate::config::SidebarPositionConfig::Right;
+        app.sidebar_width = 26;
+
+        compute_view(&mut app, Rect::new(0, 0, 100, 20));
+
+        let sidebar = app.view.sidebar_rect;
+        assert_eq!(sidebar, Rect::new(74, 0, 26, 20));
+        assert_eq!(app.view.terminal_area.x, 0);
+        assert_eq!(app.view.terminal_area.width, 74);
+        // The divider and the toggle move with it: both sit on the edge the
+        // panes are on, which is now the sidebar's left.
+        assert_eq!(app.sidebar_position.divider_x(sidebar), 74);
+        assert_eq!(
+            expanded_sidebar_toggle_rect(sidebar, app.sidebar_position).x,
+            75
+        );
+    }
+
+    #[test]
     fn hidden_collapsed_sidebar_uses_full_width_terminal_area() {
         let mut app = crate::app::state::AppState::test_new();
         app.sidebar_collapsed = true;
@@ -1073,7 +1106,8 @@ mod tests {
         terminal.draw(|frame| render(&app, frame)).unwrap();
         let buffer = terminal.backend().buffer();
 
-        let (ws_area, _, _) = collapsed_sidebar_sections(app.view.sidebar_rect);
+        let (ws_area, _, _) =
+            collapsed_sidebar_sections(app.view.sidebar_rect, app.sidebar_position);
         let active_row = ws_area.y + 1;
         let active_style = buffer[(ws_area.x, active_row)].style();
 
