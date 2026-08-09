@@ -24,6 +24,12 @@
 
 ---
 
+> **This is a fork.** Branch `patched` carries five commits on top of the `v0.8.0`
+> tag, described in [fork changes](#fork-changes). Everything else is upstream
+> [herdrdev/herdr](https://github.com/herdrdev/herdr).
+
+---
+
 https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 **the runtime your coding agents live on.**
@@ -37,6 +43,112 @@ https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 - **one rust binary, no electron** — runs in whatever terminal you already use.
 
 ---
+
+## fork changes
+
+Five commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
+dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
+`config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
+becomes symmetric (same total width, see below).
+
+### Per-component theme tokens
+
+`[theme.custom]` upstream only exposes palette-wide tokens, so restyling one component drags
+every other user of that token along. This adds background and foreground pairs for the
+sidebar spaces, the agent panel and the tab bar, each falling back to the palette token that
+component used before:
+
+```toml
+[theme.custom]
+space_active_bg = "#000000"
+space_active_fg = "#ffffff"
+space_inactive_fg = "#888888"
+space_selected_bg = "#000000"
+space_selected_fg = "green"
+agent_active_bg = "#000000"
+agent_active_fg = "#ffffff"
+agent_inactive_bg = "#000000"
+agent_inactive_fg = "#888888"
+tab_active_bg = "#000000"
+tab_active_fg = "#ffffff"
+tab_inactive_bg = "#000000"
+tab_inactive_fg = "#888888"
+sidebar_divider = "#333333"
+```
+
+Leaving `agent_inactive_bg` unset keeps those rows unpainted, the way they are upstream.
+Auto-named tabs keep their own dimmer foreground unless `tab_inactive_fg` is set, which then
+wins for both kinds of tab.
+
+### A `spacer` sidebar token
+
+Sidebar rows are already token lists. A `spacer` eats whatever width the other tokens of its
+row left over, so everything after it renders flush right, one column of gutter in from the
+edge to mirror the one on the left:
+
+```toml
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace", "spacer", { token = "branch", dim = true }]]
+
+[ui.sidebar.agents]
+rows = [["state_icon", "workspace", "spacer", "tab"], ["agent"]]
+```
+
+Several spacers in one row split the slack evenly, which gives centring as well. In a sidebar
+too narrow for the row, spacers collapse to nothing and the layout falls back to upstream
+behaviour.
+
+### Tab row spacing
+
+The tab row geometry was three hardcoded constants. It is now configurable:
+
+```toml
+[ui.tab_bar]
+label_padding = 2   # blank columns on each side of a tab label
+gap = 1             # blank columns between two tabs
+min_width = 8       # smallest tab width, padding included; 0 lets short labels shrink
+```
+
+The padding default of 2 is the one intentional change of appearance: upstream spends one
+column to the left of the label and three to the right, which puts the label visibly off
+centre inside a coloured tab. The total width is unchanged.
+
+### Dividers without the outer border
+
+Herdr has no frame widget: what reads as a border around the pane area is the perimeter of the
+per-pane boxes. With `pane_outer_border = false` every border edge that faces no other pane is
+dropped, so only the dividers between panes survive and a row at the top and bottom, plus a
+column on each side, go back to the terminal:
+
+```toml
+[ui]
+pane_outer_border = false
+```
+
+It also drops every border title, agent labels and manual pane names alike. Titles live inside
+a top border, and without the frame only some panes still have one, so keeping them would show
+titles on an arbitrary subset of the splits.
+
+### Re-running commands on restore
+
+A cold restore gives every pane a bare shell in its saved directory. Agent panes are the
+exception: Herdr saves their session id and re-runs the agent with its own resume flag. This
+generalises that to any command you list:
+
+```toml
+[session]
+restore_commands = ["nvim", "lazygit"]
+```
+
+When the session is saved, a pane whose foreground process matches one of those executables
+records its argv, and the restore re-runs it through the same deferred resume path the agents
+use. Matching is on the executable name, so a store path or any absolute path still matches a
+bare `nvim`. The allowlist is deliberate: without it a restore would relaunch whatever happened
+to be in the foreground, including an `ssh`, a `psql` or a half-finished destructive command.
+
+This restarts the program, not its state. `nvim` reopens empty unless a session plugin such as
+persistence.nvim restores it; `lazygit` needs nothing, since reopening it in the same repository
+is the whole of its state.
 
 ## install
 
