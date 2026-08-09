@@ -5,8 +5,8 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 
 use super::{
     ActionKeybinds, BindingConfig, CommandKeybindConfig, IndexedKeybind, Keybinds, SidebarConfig,
-    SoundConfig, ThemeConfig, DEFAULT_MOBILE_WIDTH_THRESHOLD, DEFAULT_MOUSE_SCROLL_LINES,
-    DEFAULT_SCROLLBACK_LIMIT_BYTES,
+    SoundConfig, TabBarToken, ThemeConfig, DEFAULT_MOBILE_WIDTH_THRESHOLD,
+    DEFAULT_MOUSE_SCROLL_LINES, DEFAULT_SCROLLBACK_LIMIT_BYTES,
 };
 
 pub const MAX_TOAST_DELAY_SECONDS: u64 = 3600;
@@ -790,10 +790,15 @@ const DEFAULT_TAB_LABEL_PADDING: u16 = 2;
 const DEFAULT_TAB_GAP: u16 = 1;
 const DEFAULT_TAB_MIN_WIDTH: u16 = 8;
 
-/// Geometry of the tab row. Widths are terminal columns.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+/// Geometry and label of the tab row. Widths are terminal columns.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TabBarConfig {
+    /// What a tab is labelled with. Tokens are concatenated exactly as listed —
+    /// there is no implicit separator, because `{ text = "…" }` exists so the
+    /// separator is a choice rather than a default.
+    #[serde(deserialize_with = "super::sidebar::deserialize_tab_label")]
+    pub label: Vec<TabBarToken>,
     /// Blank columns kept on each side of a tab label. Default: 2.
     pub label_padding: u16,
     /// Blank columns between two tabs. Default: 1.
@@ -806,6 +811,13 @@ pub struct TabBarConfig {
 impl Default for TabBarConfig {
     fn default() -> Self {
         Self {
+            // The number then the name, so an unnamed tab reads exactly as it
+            // did before (just its number) and a named one gains the number.
+            label: vec![
+                TabBarToken::Index,
+                TabBarToken::Text(" ".into()),
+                TabBarToken::Name,
+            ],
             label_padding: DEFAULT_TAB_LABEL_PADDING,
             gap: DEFAULT_TAB_GAP,
             min_width: DEFAULT_TAB_MIN_WIDTH,

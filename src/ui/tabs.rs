@@ -21,34 +21,115 @@ pub(crate) struct TabBarView {
     pub new_tab_hit_area: Rect,
 }
 
-fn tab_width(
-    ws: &crate::workspace::Workspace,
-    tab_idx: usize,
-    config: &crate::config::TabBarConfig,
-) -> u16 {
-    display_width_u16(&tab_chrome_label(ws, tab_idx))
+fn tab_width(label: &str, config: &crate::config::TabBarConfig) -> u16 {
+    display_width_u16(label)
         .saturating_add(config.label_padding.saturating_mul(2))
         .max(config.min_width)
 }
 
-fn tab_chrome_label(ws: &crate::workspace::Workspace, tab_idx: usize) -> String {
-    let name = ws
-        .tab_display_name(tab_idx)
-        .unwrap_or_else(|| (tab_idx + 1).to_string());
-    if ws.tabs.get(tab_idx).is_some_and(|tab| tab.zoomed) {
-        format!("{name} Z")
-    } else {
-        name
+/// Resolve one token against the tab, or `None` when it has no value — an
+/// unnamed tab, a pane with no agent — so the label closes up instead of
+/// leaving a gap.
+fn resolved_token(
+    token: &crate::config::TabBarToken,
+    ws: &crate::workspace::Workspace,
+    tab_idx: usize,
+    terminals: &std::collections::HashMap<
+        crate::terminal::TerminalId,
+        crate::terminal::TerminalState,
+    >,
+) -> Option<String> {
+    use crate::config::TabBarToken;
+
+    let tab = ws.tabs.get(tab_idx)?;
+    // Values come from the tab's focused pane: it is the one you would be
+    // looking at if you switched to that tab.
+    let terminal = || {
+        tab.terminal_id(tab.layout.focused())
+            .and_then(|id| terminals.get(id))
+    };
+
+    match token {
+        TabBarToken::Index => Some((tab_idx + 1).to_string()),
+        TabBarToken::Name => tab.custom_name.clone(),
+        TabBarToken::Agent => terminal().and_then(|terminal| {
+            terminal
+                .effective_display_agent()
+                .or_else(|| terminal.effective_agent_label().map(str::to_string))
+        }),
+        TabBarToken::TerminalTitle => terminal().and_then(|terminal| terminal.terminal_title.clone()),
+        TabBarToken::TerminalTitleStripped => {
+            terminal().and_then(|terminal| terminal.terminal_title_stripped())
+        }
+        TabBarToken::Custom(name) => terminal()
+            .and_then(|terminal| terminal.metadata_tokens.values().get(name).cloned()),
+        TabBarToken::Text(text) => Some(text.clone()),
     }
+    .filter(|value| !value.is_empty())
+}
+
+pub(crate) fn tab_chrome_label(
+    app: &AppState,
+    ws: &crate::workspace::Workspace,
+    tab_idx: usize,
+) -> String {
+    let resolved = app
+        .tab_bar
+        .label
+        .iter()
+        .map(|token| (token, resolved_token(token, ws, tab_idx, &app.terminals)))
+        .collect::<Vec<_>>();
+
+    // A literal is punctuation between two values, so it is dropped when it
+    // would lead, trail, or sit next to another literal: an unnamed tab with
+    // `["index", { text = ":" }, "name"]` reads `1`, not `1:`.
+    let mut label = String::new();
+    for (position, (token, value)) in resolved.iter().enumerate() {
+        let Some(value) = value else { continue };
+        if token.is_text() {
+            let has_value_before = resolved[..position]
+                .iter()
+                .any(|(token, value)| !token.is_text() && value.is_some());
+            let has_value_after = resolved[position + 1..]
+                .iter()
+                .any(|(token, value)| !token.is_text() && value.is_some());
+            if !has_value_before || !has_value_after {
+                continue;
+            }
+        }
+        label.push_str(value);
+    }
+
+    // Zoom stays outside the label: it is pane state the user did not ask to
+    // see, and hiding it would hide that the tab is showing one pane of several.
+    if tab_zoomed(ws, tab_idx) {
+        if label.is_empty() {
+            return "Z".to_string();
+        }
+        return format!("{label} Z");
+    }
+    label
+}
+
+fn tab_zoomed(ws: &crate::workspace::Workspace, tab_idx: usize) -> bool {
+    ws.tabs.get(tab_idx).is_some_and(|tab| tab.zoomed)
+}
+
+/// Every tab's label, in order. Computed once by the caller because laying the
+/// row out needs the widths, and the widths need the labels.
+pub(crate) fn tab_bar_labels(app: &AppState, ws: &crate::workspace::Workspace) -> Vec<String> {
+    (0..ws.tabs.len())
+        .map(|tab_idx| tab_chrome_label(app, ws, tab_idx))
+        .collect()
 }
 
 fn layout_tab_hit_areas(
-    ws: &crate::workspace::Workspace,
+    labels: &[String],
     area: Rect,
     scroll: usize,
     config: &crate::config::TabBarConfig,
 ) -> Vec<Rect> {
-    let mut rects = vec![Rect::default(); ws.tabs.len()];
+    let mut rects = vec![Rect::default(); labels.len()];
     if area.width == 0 || area.height == 0 {
         return rects;
     }
@@ -59,7 +140,7 @@ fn layout_tab_hit_areas(
         if x >= right {
             break;
         }
-        let desired = tab_width(ws, idx, config);
+        let desired = tab_width(&labels[idx], config);
         let remaining = right.saturating_sub(x);
         let width = desired.min(remaining).max(1);
         *rect = Rect::new(x, area.y, width, 1);
@@ -69,17 +150,18 @@ fn layout_tab_hit_areas(
 }
 
 fn centered_tab_scroll(
-    ws: &crate::workspace::Workspace,
+    labels: &[String],
+    active_tab: usize,
     area: Rect,
     config: &crate::config::TabBarConfig,
 ) -> usize {
-    let mut best_scroll = ws.active_tab;
+    let mut best_scroll = active_tab;
     let mut best_distance = u16::MAX;
     let viewport_center = area.x.saturating_mul(2).saturating_add(area.width);
 
-    for scroll in 0..=ws.active_tab {
-        let rects = layout_tab_hit_areas(ws, area, scroll, config);
-        let Some(active_rect) = rects.get(ws.active_tab).copied() else {
+    for scroll in 0..=active_tab {
+        let rects = layout_tab_hit_areas(labels, area, scroll, config);
+        let Some(active_rect) = rects.get(active_tab).copied() else {
             continue;
         };
         if active_rect.width == 0 {
@@ -110,13 +192,13 @@ fn trailing_tab_controls_x(tab_hit_areas: &[Rect], fallback_x: u16) -> u16 {
 }
 
 fn max_tab_scroll(
-    ws: &crate::workspace::Workspace,
+    labels: &[String],
     area: Rect,
     config: &crate::config::TabBarConfig,
 ) -> usize {
-    (0..ws.tabs.len())
+    (0..labels.len())
         .find(|&scroll| {
-            layout_tab_hit_areas(ws, area, scroll, config)
+            layout_tab_hit_areas(labels, area, scroll, config)
                 .last()
                 .is_some_and(|rect| rect.width > 0)
         })
@@ -125,6 +207,7 @@ fn max_tab_scroll(
 
 pub(crate) fn compute_tab_bar_view(
     ws: &crate::workspace::Workspace,
+    labels: &[String],
     area: Rect,
     current_scroll: usize,
     follow_active: bool,
@@ -136,15 +219,15 @@ pub(crate) fn compute_tab_bar_view(
     }
 
     if !mouse_chrome {
-        let max_scroll = max_tab_scroll(ws, area, config);
+        let max_scroll = max_tab_scroll(labels, area, config);
         let scroll = if follow_active {
-            centered_tab_scroll(ws, area, config).min(max_scroll)
+            centered_tab_scroll(labels, ws.active_tab, area, config).min(max_scroll)
         } else {
             current_scroll.min(max_scroll)
         };
         return TabBarView {
             scroll,
-            tab_hit_areas: layout_tab_hit_areas(ws, area, scroll, config),
+            tab_hit_areas: layout_tab_hit_areas(labels, area, scroll, config),
             scroll_left_hit_area: Rect::default(),
             scroll_right_hit_area: Rect::default(),
             new_tab_hit_area: Rect::default(),
@@ -158,7 +241,7 @@ pub(crate) fn compute_tab_bar_view(
         area.width.saturating_sub(NEW_TAB_WIDTH),
         area.height,
     );
-    let all_tabs = layout_tab_hit_areas(ws, all_tabs_area, 0, config);
+    let all_tabs = layout_tab_hit_areas(labels, all_tabs_area, 0, config);
     let overflow = all_tabs.iter().any(|rect| rect.width == 0);
     if !overflow {
         let new_tab_x = trailing_tab_controls_x(&all_tabs, area.x);
@@ -188,13 +271,13 @@ pub(crate) fn compute_tab_bar_view(
         area.height,
     );
 
-    let max_scroll = max_tab_scroll(ws, tab_area, config);
+    let max_scroll = max_tab_scroll(labels, tab_area, config);
     let scroll = if follow_active {
-        centered_tab_scroll(ws, tab_area, config).min(max_scroll)
+        centered_tab_scroll(labels, ws.active_tab, tab_area, config).min(max_scroll)
     } else {
         current_scroll.min(max_scroll)
     };
-    let tab_hit_areas = layout_tab_hit_areas(ws, tab_area, scroll, config);
+    let tab_hit_areas = layout_tab_hit_areas(labels, tab_area, scroll, config);
     let trailing_x = trailing_tab_controls_x(&tab_hit_areas, tab_area_x).min(tab_area_right);
     let right_hit_area = Rect::new(
         trailing_x,
@@ -360,7 +443,7 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
                 .bg(app.tab_inactive_bg())
         };
         let width = rect.width as usize;
-        let name = tab_chrome_label(ws, idx);
+        let name = tab_chrome_label(app, ws, idx);
         // The leading pad is spelled out and the label left-aligned in what is
         // left, so a `min_width` wider than the label spends the extra columns
         // on the right rather than drifting the label out of centre.
@@ -454,6 +537,7 @@ mod tests {
         app.view.tab_bar_rect = Rect::new(0, 0, 30, 1);
         let view = compute_tab_bar_view(
             &app.workspaces[0],
+            &tab_bar_labels(&app, &app.workspaces[0]),
             app.view.tab_bar_rect,
             0,
             true,
@@ -488,6 +572,7 @@ mod tests {
         app.view.tab_bar_rect = Rect::new(0, 0, 30, 1);
         let view = compute_tab_bar_view(
             &app.workspaces[0],
+            &tab_bar_labels(&app, &app.workspaces[0]),
             app.view.tab_bar_rect,
             0,
             true,
@@ -510,27 +595,114 @@ mod tests {
         assert!(!style.add_modifier.contains(Modifier::BOLD));
     }
 
+    fn label_of(app: &AppState, ws: &Workspace, tab_idx: usize) -> String {
+        tab_chrome_label(app, ws, tab_idx)
+    }
+
     #[test]
     fn zoom_marker_counts_toward_tab_width() {
+        let app = AppState::test_new();
         let mut ws = Workspace::test_new("test");
         ws.tabs[0].set_custom_name("abcdefgh".into());
         ws.tabs[0].zoomed = true;
 
+        // "1 abcdefgh Z" plus the default padding on each side.
         assert_eq!(
-            tab_width(&ws, 0, &crate::config::TabBarConfig::default()),
-            14
+            tab_width(
+                &label_of(&app, &ws, 0),
+                &crate::config::TabBarConfig::default()
+            ),
+            16
         );
     }
 
     #[test]
     fn tab_width_uses_display_width_for_cjk_labels() {
+        let app = AppState::test_new();
         let mut ws = Workspace::test_new("test");
         ws.tabs[0].set_custom_name("提交 herdr 的反馈".into());
 
         assert_eq!(
-            tab_width(&ws, 0, &crate::config::TabBarConfig::default()),
-            display_width_u16("提交 herdr 的反馈") + 4
+            tab_width(
+                &label_of(&app, &ws, 0),
+                &crate::config::TabBarConfig::default()
+            ),
+            display_width_u16("1 提交 herdr 的反馈") + 4
         );
+    }
+
+    #[test]
+    fn default_label_is_the_index_then_the_name() {
+        let app = AppState::test_new();
+        let mut ws = Workspace::test_new("test");
+        ws.test_add_tab(None);
+        ws.tabs[1].set_custom_name("logs".into());
+
+        // An unnamed tab keeps reading as just its number: the separator is
+        // dropped because it would trail nothing.
+        assert_eq!(label_of(&app, &ws, 0), "1");
+        assert_eq!(label_of(&app, &ws, 1), "2 logs");
+    }
+
+    #[test]
+    fn literal_tokens_only_survive_between_two_values() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.tab_bar]
+label = ["index", { text = ":" }, "name"]
+"#,
+        )
+        .expect("tab label config");
+        let mut app = AppState::test_new();
+        app.tab_bar = config.ui.tab_bar;
+        let mut ws = Workspace::test_new("test");
+        ws.test_add_tab(None);
+        ws.tabs[1].set_custom_name("logs".into());
+
+        assert_eq!(label_of(&app, &ws, 0), "1");
+        assert_eq!(label_of(&app, &ws, 1), "2:logs");
+    }
+
+    #[test]
+    fn agent_and_custom_tokens_come_from_the_focused_pane() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.tab_bar]
+label = ["agent", { text = " " }, "$model"]
+"#,
+        )
+        .unwrap();
+        let mut app = AppState::test_new();
+        app.tab_bar = config.ui.tab_bar;
+        let ws = Workspace::test_new("test");
+        let pane_id = ws.tabs[0].root_pane;
+        let terminal_id = ws.tabs[0].panes[&pane_id].attached_terminal_id.clone();
+        let mut terminal =
+            crate::terminal::TerminalState::new(terminal_id.clone(), "/tmp".into());
+        terminal.detected_agent = Some(crate::detect::Agent::Claude);
+        terminal.metadata_tokens.patch(
+            std::collections::HashMap::from([("model".into(), Some("haiku".into()))]),
+            None,
+            std::time::Instant::now(),
+        );
+        app.terminals.insert(terminal_id, terminal);
+
+        assert_eq!(label_of(&app, &ws, 0), "claude haiku");
+    }
+
+    #[test]
+    fn rejects_oversized_and_unknown_tab_label_tokens() {
+        for label in [
+            r#"["index", { text = "far too long" }]"#,
+            r#"["nope"]"#,
+            r#"["index", "index", "index", "index", "index", "index", "index", "index", "index"]"#,
+        ] {
+            let input = format!("[ui.tab_bar]\nlabel = {label}\n");
+            assert!(
+                toml::from_str::<crate::config::Config>(&input).is_err(),
+                "accepted {label}"
+            );
+        }
     }
 
     #[test]
@@ -543,6 +715,8 @@ mod tests {
         app.active = Some(0);
         app.workspaces = vec![ws];
         app.tab_bar = crate::config::TabBarConfig {
+            // Just the name, so the widths under test are the label's own.
+            label: vec![crate::config::TabBarToken::Name],
             label_padding: 1,
             gap: 3,
             min_width: 0,
@@ -550,6 +724,7 @@ mod tests {
         app.view.tab_bar_rect = Rect::new(0, 0, 30, 1);
         let view = compute_tab_bar_view(
             &app.workspaces[0],
+            &tab_bar_labels(&app, &app.workspaces[0]),
             app.view.tab_bar_rect,
             0,
             true,
@@ -585,6 +760,7 @@ mod tests {
         app.view.tab_bar_rect = Rect::new(0, 0, 30, 1);
         let view = compute_tab_bar_view(
             &app.workspaces[0],
+            &tab_bar_labels(&app, &app.workspaces[0]),
             app.view.tab_bar_rect,
             0,
             true,
@@ -601,9 +777,10 @@ mod tests {
         let buffer = terminal.backend().buffer();
         let tab = app.view.tab_hit_areas[0];
 
-        assert_eq!(tab.width, 10);
-        assert_eq!(buffer_row_text(buffer, tab, 0), "  agents");
-        for x in [tab.x, tab.x + 1, tab.x + 8, tab.x + 9] {
+        // The default label is the index then the name, so "1 agents".
+        assert_eq!(tab.width, 12);
+        assert_eq!(buffer_row_text(buffer, tab, 0), "  1 agents");
+        for x in [tab.x, tab.x + 1, tab.x + 10, tab.x + 11] {
             assert_eq!(buffer[(x, tab.y)].symbol(), " ");
             assert_eq!(buffer[(x, tab.y)].style().bg, Some(app.palette.accent));
         }
@@ -620,6 +797,7 @@ mod tests {
         app.view.tab_bar_rect = Rect::new(0, 0, 30, 1);
         let view = compute_tab_bar_view(
             &app.workspaces[0],
+            &tab_bar_labels(&app, &app.workspaces[0]),
             app.view.tab_bar_rect,
             0,
             true,
