@@ -275,12 +275,18 @@ pub struct SessionConfig {
     /// Resume supported AI-agent panes into their native conversation sessions
     /// when restoring a Herdr session. Default: true.
     pub resume_agents_on_restore: bool,
+    /// Executable names that a restored pane re-runs when they were the pane's
+    /// foreground process, for example ["nvim", "lazygit"]. Everything else
+    /// comes back as a plain shell, since re-running an arbitrary command is
+    /// not always safe. Default: empty.
+    pub restore_commands: Vec<String>,
 }
 
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
             resume_agents_on_restore: true,
+            restore_commands: Vec::new(),
         }
     }
 }

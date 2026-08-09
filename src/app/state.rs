@@ -1487,6 +1487,8 @@ pub struct AppState {
     pub sidebar_agents: crate::config::AgentsSidebarConfig,
     pub sidebar_spaces: crate::config::SpacesSidebarConfig,
     pub tab_bar: crate::config::TabBarConfig,
+    /// Foreground executables a restored pane re-runs. See `SessionConfig`.
+    pub restore_commands: Vec<String>,
     pub next_agent_state_change_seq: u64,
     /// Capture mouse input for Herdr's own mouse UI. When false, Herdr only
     /// captures mouse while the focused pane app requests mouse reporting.
@@ -1976,6 +1978,7 @@ impl AppState {
             sidebar_agents: crate::config::AgentsSidebarConfig::default(),
             sidebar_spaces: crate::config::SpacesSidebarConfig::default(),
             tab_bar: crate::config::TabBarConfig::default(),
+            restore_commands: Vec::new(),
             next_agent_state_change_seq: 0,
             mouse_capture: true,
             copy_on_select: true,
