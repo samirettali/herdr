@@ -24,7 +24,7 @@
 
 ---
 
-> **This is a fork.** Branch `patched` carries six commits on top of the `v0.8.0`
+> **This is a fork.** Branch `patched` carries seven commits on top of the `v0.8.0`
 > tag, described in [fork changes](#fork-changes). Everything else is upstream
 > [herdrdev/herdr](https://github.com/herdrdev/herdr).
 
@@ -46,7 +46,7 @@ https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 ## fork changes
 
-Six commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
+Seven commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
 dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
 `config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
 becomes symmetric (same total width, see below).
@@ -143,6 +143,21 @@ min_width = 8       # smallest tab width, padding included; 0 lets short labels 
 The padding default of 2 is the one intentional change of appearance: upstream spends one
 column to the left of the label and three to the right, which puts the label visibly off
 centre inside a coloured tab. The total width is unchanged.
+
+### The prefix hint bar is optional
+
+Prefix mode lasts a single keystroke, and while it is armed a one-line bar is drawn over the
+bottom row of the pane area — the tab bar, when it sits at the bottom. So every prefix press
+flashes a reminder of keys you already know over content you were reading:
+
+```toml
+[ui]
+prefix_hint = false
+```
+
+With it off nothing is drawn at all, badge included, and prefix mode is visible only from the
+next key not reaching the pane. The hint bars for copy, resize and navigate mode are untouched:
+those modes persist rather than flashing, so their reminder still earns its row.
 
 ### Dividers without the outer border
 
