@@ -213,6 +213,13 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # resize_mode = "prefix+r"
 # toggle_sidebar = "prefix+b"
 
+# Executables that keep the directional pane keys for themselves. While one of
+# them is the focused pane's foreground process, a prefix-less focus_pane_*
+# chord goes to the pane instead of moving focus, so the program navigates its
+# own splits and calls `herdr pane focus --direction ...` when it hits its edge.
+# Prefix bindings and every other action are unaffected.
+# passthrough_commands = ["nvim"]
+
 # Navigate-mode movement. These local shortcuts win while navigate mode is open.
 # They are independent from focus_pane_*. Do not include prefix+, esc, enter, tab, or 1..9 here.
 # navigate_workspace_up = "up"

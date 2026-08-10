@@ -427,6 +427,14 @@ pub struct KeysConfig {
     /// Prefix-mode custom command bindings.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub command: Vec<CommandKeybindConfig>,
+    /// Executable names that keep the directional pane keys for themselves, for
+    /// example ["nvim"]. While one of them is the focused pane's foreground
+    /// process, a prefix-less focus_pane_* chord is forwarded to the pane
+    /// instead of moving focus, so the program can navigate its own splits and
+    /// call `herdr pane focus` when it reaches its edge. Prefix bindings and
+    /// every other action are unaffected. Default: empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub passthrough_commands: Vec<String>,
     #[serde(skip_serializing)]
     pub(crate) user_fields: BTreeSet<&'static str>,
 }
@@ -544,6 +552,8 @@ pub(crate) struct KeysConfigOverlay {
     indexed: Option<IndexedKeysConfig>,
     #[serde(skip_serializing)]
     command: Option<Vec<CommandKeybindConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    passthrough_commands: Option<Vec<String>>,
 }
 
 impl<'de> Deserialize<'de> for KeysConfig {
@@ -618,6 +628,7 @@ impl<'de> Deserialize<'de> for KeysConfig {
         apply_field!(toggle_sidebar);
         apply_field!(indexed);
         apply_field!(command);
+        apply_field!(passthrough_commands);
 
         Ok(keys)
     }
@@ -715,6 +726,7 @@ impl KeysConfig {
         copy_effective_action_field!(resize_mode, keybinds.resize_mode);
         copy_effective_action_field!(toggle_sidebar, keybinds.toggle_sidebar);
         copy_user_field!(indexed);
+        copy_user_field!(passthrough_commands);
 
         profile
     }
@@ -1071,6 +1083,7 @@ impl Default for KeysConfig {
             toggle_sidebar: BindingConfig::one("prefix+b"),
             indexed: IndexedKeysConfig::default(),
             command: Vec::new(),
+            passthrough_commands: Vec::new(),
             user_fields: BTreeSet::new(),
         }
     }
