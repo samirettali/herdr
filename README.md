@@ -46,7 +46,7 @@ https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 ## fork changes
 
-Eight commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
+Nine commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
 dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
 `config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
 becomes symmetric (same total width, see below).
@@ -207,6 +207,44 @@ to be in the foreground, including an `ssh`, a `psql` or a half-finished destruc
 This restarts the program, not its state. `nvim` reopens empty unless a session plugin such as
 persistence.nvim restores it; `lazygit` needs nothing, since reopening it in the same repository
 is the whole of its state.
+
+### Pane keys a program can keep for itself
+
+Bind the pane keys without a prefix and Herdr eats them everywhere, so `ctrl+h` never reaches
+the editor that wants it for its own splits. This is the missing half of what
+`vim-tmux-navigator` gets from tmux's `#{pane_current_command}` conditional:
+
+```toml
+[keys]
+focus_pane_left = "ctrl+h"
+focus_pane_down = "ctrl+j"
+focus_pane_up = "ctrl+k"
+focus_pane_right = "ctrl+l"
+passthrough_commands = ["nvim"]
+```
+
+While one of those executables is the focused pane's foreground process, a prefix-less
+`focus_pane_*` chord is forwarded to the pane instead of moving focus. The program navigates its
+own splits and calls `herdr pane focus --direction left` when it hits its edge, which is one
+keymap on the editor side:
+
+```lua
+for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
+  vim.keymap.set("n", "<C-" .. key .. ">", function()
+    local from = vim.api.nvim_get_current_win()
+    vim.cmd.wincmd(key)
+    if vim.api.nvim_get_current_win() == from then
+      vim.system({ "herdr", "pane", "focus", "--direction", direction })
+    end
+  end)
+end
+```
+
+Prefix bindings and every other action are untouched, so `prefix+h` still moves focus from
+inside `nvim` and a direct `ctrl+alt+g` custom command still fires. Matching is on the executable
+name, like `restore_commands`. Only the foreground process group leader is inspected — the
+command the user typed — and the lookup is two process queries on the keystroke itself, so
+nothing is cached and nothing goes stale after a `:sh` or a `Ctrl-Z`.
 
 ## install
 

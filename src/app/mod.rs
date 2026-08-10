@@ -663,6 +663,7 @@ impl App {
             sidebar_spaces: config.ui.sidebar.spaces.clone(),
             tab_bar: config.ui.tab_bar.clone(),
             restore_commands: config.session.restore_commands.clone(),
+            passthrough_commands: config.keys.passthrough_commands.clone(),
             next_agent_state_change_seq: 0,
             mouse_capture: config.ui.mouse_capture,
             copy_on_select: config.ui.copy_on_select,
@@ -1541,6 +1542,7 @@ impl App {
                 self.state.sidebar_spaces = config.ui.sidebar.spaces.clone();
                 self.state.tab_bar = config.ui.tab_bar.clone();
                 self.state.restore_commands = config.session.restore_commands.clone();
+                self.state.passthrough_commands = config.keys.passthrough_commands.clone();
                 self.state.agent_panel_scroll = 0;
                 self.state.accent = crate::config::parse_color(&config.ui.accent);
                 if !self.state.local_sound_playback && self.state.sound != config.ui.sound {

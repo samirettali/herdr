@@ -27,6 +27,15 @@ fn is_modifier_only_key(code: &KeyCode) -> bool {
     matches!(code, KeyCode::Modifier(_))
 }
 
+/// Matching is on the executable name alone, so an absolute path or a wrapper
+/// in the store still matches a bare `nvim` in the config.
+fn command_is_listed(commands: &[String], candidate: &str) -> bool {
+    std::path::Path::new(candidate)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|executable| commands.iter().any(|listed| listed == executable))
+}
+
 impl App {
     #[cfg(test)]
     pub(crate) fn handle_terminal_key_headless(
@@ -60,6 +69,57 @@ impl App {
         sent.then_some(input.target)
     }
 
+    /// Whether a directional pane key belongs to the program in the focused
+    /// pane rather than to Herdr, because the user listed it in
+    /// `keys.passthrough_commands`. This is what lets Neovim keep `ctrl+h`
+    /// for its own splits and call `herdr pane focus` only at its edge.
+    ///
+    /// Only the process group leader is inspected: it is the command the user
+    /// typed, and the two process queries it costs are cheap enough to run on
+    /// the keystroke itself, so no cached foreground state can go stale.
+    fn focus_pane_key_belongs_to_pane(&self, action: super::navigate::NavigateAction) -> bool {
+        use super::navigate::NavigateAction;
+
+        if self.state.passthrough_commands.is_empty()
+            || !matches!(
+                action,
+                NavigateAction::FocusPaneLeft
+                    | NavigateAction::FocusPaneDown
+                    | NavigateAction::FocusPaneUp
+                    | NavigateAction::FocusPaneRight
+            )
+        {
+            return false;
+        }
+
+        self.focused_pane_foreground_leader()
+            .is_some_and(|leader| {
+                let commands = &self.state.passthrough_commands;
+                leader
+                    .argv
+                    .as_deref()
+                    .and_then(<[String]>::first)
+                    .is_some_and(|argv0| command_is_listed(commands, argv0))
+                    || leader
+                        .argv0
+                        .as_deref()
+                        .is_some_and(|argv0| command_is_listed(commands, argv0))
+                    || command_is_listed(commands, &leader.name)
+            })
+    }
+
+    fn focused_pane_foreground_leader(&self) -> Option<crate::platform::ForegroundProcess> {
+        let ws_idx = self.state.active?;
+        let runtime = self
+            .state
+            .focused_runtime_in_workspace(&self.terminal_runtimes, ws_idx)?;
+        let group = crate::detect::foreground_process_group_id(runtime.child_pid()?)?;
+        crate::detect::foreground_group_leader_job(group)?
+            .processes
+            .into_iter()
+            .next()
+    }
+
     fn prepare_terminal_key_forward(
         &mut self,
         source_id: InputSourceId,
@@ -76,6 +136,7 @@ impl App {
 
         if let Some(action) =
             super::terminal_direct_non_indexed_navigation_action(&self.state, &key)
+                .filter(|action| !self.focus_pane_key_belongs_to_pane(*action))
         {
             debug!(
                 code = ?key_event.code,
@@ -1491,6 +1552,100 @@ mod tests {
         assert_eq!(wait_for_file(&output_path), "direct");
         assert_eq!(app.state.mode, Mode::Terminal);
         let _ = std::fs::remove_file(output_path);
+    }
+
+    #[test]
+    fn passthrough_matches_on_the_executable_name_only() {
+        let commands = vec!["nvim".to_string()];
+
+        assert!(command_is_listed(&commands, "nvim"));
+        assert!(command_is_listed(&commands, "/nix/store/abc123/bin/nvim"));
+        assert!(!command_is_listed(&commands, "nvim-qt"));
+        assert!(!command_is_listed(&commands, ""));
+        assert!(!command_is_listed(&[], "nvim"));
+    }
+
+    /// The pane's own foreground executable, whatever the test host calls its
+    /// shell, so the assertions below never depend on it being named "sh".
+    #[cfg(unix)]
+    async fn spawned_pane_foreground_executable(app: &App) -> String {
+        for _ in 0..100 {
+            if let Some(leader) = app.focused_pane_foreground_leader() {
+                let raw = leader
+                    .argv
+                    .as_deref()
+                    .and_then(<[String]>::first)
+                    .cloned()
+                    .or(leader.argv0)
+                    .unwrap_or(leader.name);
+                if let Some(name) = std::path::Path::new(&raw)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                {
+                    return name.to_string();
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        panic!("pane never reported a foreground process");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn direct_focus_pane_key_reaches_a_listed_foreground_command() {
+        let mut app = app_with_spawned_workspace();
+        let executable = spawned_pane_foreground_executable(&app).await;
+        app.state.keybinds.focus_pane_left = crate::config::ActionKeybinds::direct("alt+h");
+        app.state.passthrough_commands = vec![executable];
+
+        let forwarded = app
+            .handle_terminal_key(TerminalKey::new(KeyCode::Char('h'), KeyModifiers::ALT))
+            .await;
+
+        assert!(
+            forwarded.is_some(),
+            "a listed foreground command should receive the key itself"
+        );
+        shutdown_test_runtimes(&mut app);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn direct_focus_pane_key_stays_with_herdr_for_an_unlisted_command() {
+        let mut app = app_with_spawned_workspace();
+        spawned_pane_foreground_executable(&app).await;
+        app.state.keybinds.focus_pane_left = crate::config::ActionKeybinds::direct("alt+h");
+        app.state.passthrough_commands = vec!["not-the-pane-command".into()];
+
+        let forwarded = app
+            .handle_terminal_key(TerminalKey::new(KeyCode::Char('h'), KeyModifiers::ALT))
+            .await;
+
+        assert!(
+            forwarded.is_none(),
+            "an unlisted command should leave the key to Herdr"
+        );
+        shutdown_test_runtimes(&mut app);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn direct_non_focus_key_is_never_passed_through() {
+        let mut app = app_with_spawned_workspace();
+        let executable = spawned_pane_foreground_executable(&app).await;
+        app.state.keybinds.toggle_sidebar = crate::config::ActionKeybinds::direct("alt+h");
+        app.state.passthrough_commands = vec![executable];
+
+        let forwarded = app
+            .handle_terminal_key(TerminalKey::new(KeyCode::Char('h'), KeyModifiers::ALT))
+            .await;
+
+        assert!(
+            forwarded.is_none(),
+            "passthrough covers the directional pane keys only"
+        );
+        assert!(app.state.sidebar_collapsed);
+        shutdown_test_runtimes(&mut app);
     }
 
     #[cfg(unix)]
