@@ -1,55 +1,24 @@
-# herdr
+# herdr, patched
 
-
-<p align="center">
-  <img src="assets/logo.png" alt="herdr" width="100" />
-</p>
-
-<p align="center">
-  <a href="https://herdr.dev">herdr.dev</a> · <a href="#install">install</a> · <a href="https://herdr.dev/docs/quick-start/">quick start</a> · <a href="https://herdr.dev/docs/">docs</a>
-</p>
-
-<p align="center">
-  English · <a href="README.zh-CN.md">简体中文</a>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-666666?labelColor=333333" alt="Apache 2.0 license" /></a>
-  <a href="https://github.com/herdrdev/herdr/releases"><img src="https://img.shields.io/github/downloads/herdrdev/herdr/total?labelColor=333333&color=666666" alt="total GitHub release downloads" /></a>
-  <a href="https://github.com/herdrdev/herdr/stargazers"><img src="https://img.shields.io/github/stars/herdrdev/herdr?labelColor=333333&color=666666&logo=github" alt="GitHub stars" /></a>
-  <a href="https://github.com/herdrdev/herdr/releases/latest"><img src="https://img.shields.io/github/v/release/herdrdev/herdr?label=release&labelColor=333333&color=666666" alt="latest stable release" /></a>
-  <a href="https://formulae.brew.sh/formula/herdr"><img src="https://img.shields.io/homebrew/v/herdr?label=homebrew&labelColor=333333&color=666666" alt="Homebrew version" /></a>
-  <a href="https://x.com/herdrdev"><img src="https://img.shields.io/badge/follow-%40herdrdev-000000?logo=x&logoColor=white" alt="follow @herdrdev on X" /></a>
-</p>
-
----
-
-> **This is a fork.** Branch `patched` carries eight commits on top of the `v0.8.0`
-> tag, described in [fork changes](#fork-changes). Everything else is upstream
-> [herdrdev/herdr](https://github.com/herdrdev/herdr).
-
----
-
-https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
-
-**the runtime your coding agents live on.**
-
-- **always running** — herdr is a background server; the terminals live inside it. close the lid, drop the network, or restart the machine; agents keep working and sessions come back. reattach from any terminal, or over ssh.
-- **never hunt for the stuck one** — every pane is marked working, blocked, or idle. when an agent stops and needs an answer, herdr says so.
-- **agent-native** — agents drive herdr through the cli and socket api: they can spawn panes, prompt each other, and wait until another agent is genuinely blocked. [agent skill →](https://herdr.dev/docs/agent-skill/)
-- **runs what you already run** — claude code, codex, cursor, opencode, grok and the rest. herdr doesn't wrap or replace them; it owns their terminals.
-- **keyboard and mouse, both first-class** — tmux-style prefix keys *and* click, drag, split. pick per moment, not per tool.
-- **plugins** — extend panes and workflows. [browse the marketplace →](https://herdr.dev/plugins/)
-- **one rust binary, no electron** — runs in whatever terminal you already use.
-
----
+A fork of [herdr](https://github.com/herdrdev/herdr) — the terminal workspace that keeps
+several coding agents visible at once and tells you which one is waiting for you. Docs, install
+and everything else: [herdr.dev](https://herdr.dev). This README covers only what this branch
+changes.
 
 ## fork changes
 
-Nine commits on top of `v0.8.0`, one per feature, kept separate so each can be rebased or
-dropped on its own. Every option below defaults to the upstream behaviour, so an unchanged
-`config.toml` renders exactly like vanilla Herdr — except for the tab label padding, which
-becomes symmetric (same total width, see below).
+One commit per feature, kept separate so each can be rebased or dropped on its own. Every
+option below defaults to the upstream behaviour, so an unchanged `config.toml` renders exactly
+like vanilla Herdr — except for the tab label, which gains the tab number.
+
+![The patched UI: branch names right-aligned in the spaces list, the tab label of each agent
+right-aligned in the agents panel, tabs labelled with their number and name, no border around
+the pane area](assets/patched.png)
+
+Four of the patches at once: the `spacer` token pushing the branch names and the agent tab
+labels to the right edge, tab labels composed from tokens, tighter tab spacing, and
+per-component colours. The screenshot also has upstream's `pane_outer_borders = false` on, so
+the only line left is the sidebar divider.
 
 ### Per-component theme tokens
 
@@ -140,9 +109,9 @@ gap = 1             # blank columns between two tabs
 min_width = 8       # smallest tab width, padding included; 0 lets short labels shrink
 ```
 
-The padding default of 2 is the one intentional change of appearance: upstream spends one
-column to the left of the label and three to the right, which puts the label visibly off
-centre inside a coloured tab. The total width is unchanged.
+The defaults match upstream's hardcoded geometry, so the row looks the same until you change
+one of them. `label_padding` sets the width a label reserves on each side; the label itself
+stays centred in the tab, so whatever `min_width` adds on top is spread evenly.
 
 ### The sidebar can sit on the right
 
@@ -171,21 +140,10 @@ With it off nothing is drawn at all, badge included, and prefix mode is visible 
 next key not reaching the pane. The hint bars for copy, resize and navigate mode are untouched:
 those modes persist rather than flashing, so their reminder still earns its row.
 
-### Dividers without the outer border
+### A zoomed pane without its border
 
-Herdr has no frame widget: what reads as a border around the pane area is the perimeter of the
-per-pane boxes. With `pane_outer_border = false` every border edge that faces no other pane is
-dropped, so only the dividers between panes survive and a row at the top and bottom, plus a
-column on each side, go back to the terminal:
-
-```toml
-[ui]
-pane_outer_border = false
-```
-
-It also drops every border title, agent labels and manual pane names alike. Titles live inside
-a top border, and without the frame only some panes still have one, so keeping them would show
-titles on an arbitrary subset of the splits.
+Upstream v0.8.2 ships the outer-border option this fork used to carry, as `[ui]
+pane_outer_borders`, so that patch is gone. What remains is the zoom half of it.
 
 ### Re-running commands on restore
 
@@ -245,48 +203,3 @@ inside `nvim` and a direct `ctrl+alt+g` custom command still fires. Matching is 
 name, like `restore_commands`. Only the foreground process group leader is inspected — the
 command the user typed — and the lookup is two process queries on the keystroke itself, so
 nothing is cached and nothing goes stale after a `:sh` or a `Ctrl-Z`.
-
-## install
-
-```bash
-curl -fsSL https://herdr.dev/install.sh | sh
-```
-
-or `brew install herdr` · `mise use -g herdr` · windows beta: `powershell -ExecutionPolicy Bypass -c "irm https://herdr.dev/install.ps1 | iex"` · [binaries](https://github.com/herdrdev/herdr/releases)
-
-then start it where the work lives:
-
-```bash
-herdr
-```
-
-run your agents, split panes, walk away. `ctrl+b q` detaches, `herdr` reattaches. [quick start →](https://herdr.dev/docs/quick-start/)
-
-## docs
-
-everything lives at [herdr.dev/docs](https://herdr.dev/docs/): [quick start](https://herdr.dev/docs/quick-start/) · [concepts](https://herdr.dev/docs/concepts/) · [supported agents](https://herdr.dev/docs/agents/) · [keyboard](https://herdr.dev/docs/keyboard/) · [configuration](https://herdr.dev/docs/configuration/) · [session state](https://herdr.dev/docs/session-state/) · [remote](https://herdr.dev/docs/persistence-remote/) · [integrations](https://herdr.dev/docs/integrations/) · [plugins](https://herdr.dev/docs/plugins/) · [socket api](https://herdr.dev/docs/socket-api/)
-
-## thanks
-
-every past sponsor and backer is listed in [SPONSORS.md](./SPONSORS.md) — thank you 🐑
-
-enterprise / partnership: hey@herdr.dev
-
-## agent instructions
-
-if you are an ai agent helping with this repository, read [`AGENTS.md`](./AGENTS.md) before making changes and read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening issues or PRs.
-
-## development
-
-```bash
-git clone https://github.com/herdrdev/herdr
-cd herdr
-cargo build --release
-
-just test        # unit tests
-just check       # formatting, tests, and maintenance checks
-```
-
-## license
-
-Herdr is licensed under the [Apache License 2.0](LICENSE).
