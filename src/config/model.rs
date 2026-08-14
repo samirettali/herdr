@@ -965,6 +965,8 @@ pub struct UiConfig {
     pub prefix_hint: bool,
     /// Draw borders around split panes. Default: true.
     pub pane_borders: bool,
+    /// Hide pane borders while a split pane is zoomed. Default: false.
+    pub hide_pane_borders_when_zoomed: bool,
     /// Draw borders along the outside edge of the pane area. Default: true.
     pub pane_outer_borders: bool,
     /// Draw interactive scrollbars beside terminal panes. Default: true.
@@ -1208,6 +1210,7 @@ impl Default for UiConfig {
             prompt_new_workspace_name: false,
             prefix_hint: true,
             pane_borders: true,
+            hide_pane_borders_when_zoomed: false,
             pane_outer_borders: true,
             pane_scrollbars: true,
             pane_gaps: true,
@@ -1487,6 +1490,7 @@ status_indicators = "symbols"
         let default_config = Config::default();
         assert!(default_config.ui.pane_borders);
         assert!(default_config.ui.pane_outer_borders);
+        assert!(!default_config.ui.hide_pane_borders_when_zoomed);
         assert!(default_config.ui.pane_scrollbars);
         assert!(default_config.ui.pane_gaps);
         assert!(!default_config.ui.show_agent_labels_on_pane_borders);
@@ -1502,6 +1506,7 @@ status_indicators = "symbols"
 [ui]
 pane_borders = false
 pane_outer_borders = false
+hide_pane_borders_when_zoomed = true
 pane_scrollbars = false
 pane_gaps = true
 show_agent_labels_on_pane_borders = true
@@ -1519,6 +1524,7 @@ tab_bar_right_separator = " · "
         let config: Config = toml::from_str(toml).unwrap();
         assert!(!config.ui.pane_borders);
         assert!(!config.ui.pane_outer_borders);
+        assert!(config.ui.hide_pane_borders_when_zoomed);
         assert!(!config.ui.pane_scrollbars);
         assert!(config.ui.pane_gaps);
         assert!(config.ui.show_agent_labels_on_pane_borders);

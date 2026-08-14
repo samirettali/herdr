@@ -338,6 +338,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Draw borders around split panes.
 # pane_borders = true
 
+# Hide the border around a split pane while it is zoomed.
+# hide_pane_borders_when_zoomed = false
+
 # Draw borders along the outside edge of the pane area.
 # Disable for tmux-style internal splitters without an outside frame.
 # pane_outer_borders = true

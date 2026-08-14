@@ -208,7 +208,11 @@ pub(super) fn resize_tab_panes(
     if tab.zoomed {
         let focused_id = tab.layout.focused();
         if let Some((terminal_id, rt)) = runtime_for_tab_pane(terminal_runtimes, tab, focused_id) {
-            let borders = if multi_pane && app.pane_borders && app.pane_outer_borders {
+            let borders = if multi_pane
+                && app.pane_borders
+                && app.pane_outer_borders
+                && !app.hide_pane_borders_when_zoomed
+            {
                 Borders::ALL
             } else {
                 Borders::NONE
@@ -268,7 +272,11 @@ pub(super) fn compute_pane_infos(
 
     if ws.zoomed {
         let focused_id = ws.layout.focused();
-        let borders = if multi_pane && app.pane_borders && app.pane_outer_borders {
+        let borders = if multi_pane
+            && app.pane_borders
+            && app.pane_outer_borders
+            && !app.hide_pane_borders_when_zoomed
+        {
             Borders::ALL
         } else {
             Borders::NONE
@@ -1442,6 +1450,38 @@ mod tests {
         assert_eq!(info.rect, area);
         assert_eq!(info.scrollbar_rect, None);
         assert_eq!(info.inner_rect, Rect::new(11, 4, 37, 6));
+    }
+
+    #[tokio::test]
+    async fn zoomed_multi_pane_can_hide_borders() {
+        let mut app = AppState::test_new();
+        app.hide_pane_borders_when_zoomed = true;
+        let mut workspace = Workspace::test_new("test");
+        let focused_pane = workspace.test_split(ratatui::layout::Direction::Horizontal);
+        workspace.zoomed = true;
+        workspace.tabs[0].runtimes.insert(
+            focused_pane,
+            TerminalRuntime::test_with_scrollback_bytes(40, 8, 1024, b"ready\n"),
+        );
+        app.workspaces = vec![workspace];
+        app.active = Some(0);
+
+        let area = Rect::new(10, 3, 40, 8);
+        let terminal_runtimes = TerminalRuntimeRegistry::new();
+        let infos = compute_pane_infos(
+            &app,
+            &terminal_runtimes,
+            area,
+            false,
+            crate::kitty_graphics::HostCellSize::default(),
+        );
+        let info = &infos[0];
+
+        assert_eq!(info.id, focused_pane);
+        assert_eq!(info.rect, area);
+        assert_eq!(info.borders, Borders::NONE);
+        assert_eq!(info.scrollbar_rect, None);
+        assert_eq!(info.inner_rect, Rect::new(10, 3, 39, 8));
     }
 
     #[tokio::test]

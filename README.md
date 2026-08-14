@@ -145,6 +145,16 @@ those modes persist rather than flashing, so their reminder still earns its row.
 Upstream v0.8.2 ships the outer-border option this fork used to carry, as `[ui]
 pane_outer_borders`, so that patch is gone. What remains is the zoom half of it.
 
+A zoomed split pane keeps its border by default. To let its terminal reclaim the surrounding
+row and columns while zoomed:
+
+```toml
+[ui]
+hide_pane_borders_when_zoomed = true
+```
+
+This only affects the zoomed view. Unzooming restores the configured split borders.
+
 ### Re-running commands on restore
 
 A cold restore gives every pane a bare shell in its saved directory. Agent panes are the
