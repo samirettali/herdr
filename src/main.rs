@@ -322,6 +322,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Draw borders around split panes.
 # pane_borders = true
 
+# Hide the border around a split pane while it is zoomed.
+# hide_pane_borders_when_zoomed = false
+
 # Draw the border edges that face no other pane, that is the frame around the whole
 # pane area. False keeps only the dividers between panes, reclaiming a row at the top
 # and bottom and a column on each side, and drops every border title with it:

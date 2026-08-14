@@ -156,6 +156,16 @@ It also drops every border title, agent labels and manual pane names alike. Titl
 a top border, and without the frame only some panes still have one, so keeping them would show
 titles on an arbitrary subset of the splits.
 
+A zoomed split pane keeps its border by default. To let its terminal reclaim the surrounding
+row and columns while zoomed:
+
+```toml
+[ui]
+hide_pane_borders_when_zoomed = true
+```
+
+This only affects the zoomed view. Unzooming restores the configured split borders.
+
 ### Re-running commands on restore
 
 A cold restore gives every pane a bare shell in its saved directory. Agent panes are the

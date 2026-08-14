@@ -657,6 +657,7 @@ impl App {
             prompt_new_workspace_name: config.ui.prompt_new_workspace_name,
             prefix_hint: config.ui.prefix_hint,
             pane_borders: config.ui.pane_borders,
+            hide_pane_borders_when_zoomed: config.ui.hide_pane_borders_when_zoomed,
             pane_outer_border: config.ui.pane_outer_border,
             pane_scrollbars: config.ui.pane_scrollbars,
             pane_gaps: config.ui.pane_gaps,
@@ -1468,6 +1469,7 @@ impl App {
                 self.state.prompt_new_workspace_name = config.ui.prompt_new_workspace_name;
                 self.state.prefix_hint = config.ui.prefix_hint;
                 self.state.pane_borders = config.ui.pane_borders;
+                self.state.hide_pane_borders_when_zoomed = config.ui.hide_pane_borders_when_zoomed;
                 self.state.pane_outer_border = config.ui.pane_outer_border;
                 self.state.pane_scrollbars = config.ui.pane_scrollbars;
                 self.state.pane_gaps = config.ui.pane_gaps;
