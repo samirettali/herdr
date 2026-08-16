@@ -1114,11 +1114,12 @@ pub struct ThemeRuntimeConfig {
     pub auto_switch: bool,
     pub custom: Option<crate::config::CustomThemeColors>,
     pub legacy_accent: Option<String>,
-    /// Sidebar-specific overrides, resolved once at config load.
-    /// `None` keeps the palette token the sidebar used before.
+    /// Component-specific overrides, resolved once at config load.
+    /// `None` keeps the palette token the component used before.
     pub space_active_bg: Option<Color>,
     pub space_active_fg: Option<Color>,
     pub sidebar_divider: Option<Color>,
+    pub pane_inactive_border: Option<Color>,
     pub space_inactive_fg: Option<Color>,
     pub space_selected_bg: Option<Color>,
     pub space_selected_fg: Option<Color>,
@@ -1610,6 +1611,13 @@ impl AppState {
             .unwrap_or(self.palette.surface_dim)
     }
 
+    /// Border around panes that do not have focus.
+    pub(crate) fn pane_inactive_border(&self) -> Color {
+        self.theme_runtime
+            .pane_inactive_border
+            .unwrap_or(self.palette.overlay0)
+    }
+
     /// Foreground of space names that are neither active nor selected.
     pub(crate) fn space_inactive_fg(&self) -> Color {
         self.theme_runtime
@@ -2039,6 +2047,7 @@ impl AppState {
                 space_active_bg: None,
                 space_active_fg: None,
                 sidebar_divider: None,
+                pane_inactive_border: None,
                 space_inactive_fg: None,
                 space_selected_bg: None,
                 space_selected_fg: None,

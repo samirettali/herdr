@@ -125,6 +125,8 @@ pub struct CustomThemeColors {
     pub space_active_fg: Option<String>,
     /// Sidebar dividers and section rules. Defaults to `surface_dim`.
     pub sidebar_divider: Option<String>,
+    /// Borders around panes that do not have focus. Defaults to `overlay0`.
+    pub pane_inactive_border: Option<String>,
     /// Foreground of inactive space names in the sidebar. Defaults to `subtext0`.
     pub space_inactive_fg: Option<String>,
     /// Background of the space under the cursor in navigate mode. Defaults to `surface0`.

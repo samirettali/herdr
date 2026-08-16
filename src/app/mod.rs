@@ -315,7 +315,7 @@ fn theme_runtime_config(
         .clone()
         .unwrap_or_else(|| "catppuccin".to_string());
     let (default_dark, default_light) = sibling_theme_names(&manual_name);
-    let sidebar_override = |pick: fn(&crate::config::CustomThemeColors) -> Option<&String>| {
+    let theme_override = |pick: fn(&crate::config::CustomThemeColors) -> Option<&String>| {
         config
             .theme
             .custom
@@ -338,20 +338,21 @@ fn theme_runtime_config(
                 .and_then(|c| c.accent.as_ref())
                 .is_none())
         .then(|| config.ui.accent.clone()),
-        space_active_bg: sidebar_override(|c| c.space_active_bg.as_ref()),
-        space_active_fg: sidebar_override(|c| c.space_active_fg.as_ref()),
-        sidebar_divider: sidebar_override(|c| c.sidebar_divider.as_ref()),
-        space_inactive_fg: sidebar_override(|c| c.space_inactive_fg.as_ref()),
-        space_selected_bg: sidebar_override(|c| c.space_selected_bg.as_ref()),
-        space_selected_fg: sidebar_override(|c| c.space_selected_fg.as_ref()),
-        tab_active_bg: sidebar_override(|c| c.tab_active_bg.as_ref()),
-        tab_active_fg: sidebar_override(|c| c.tab_active_fg.as_ref()),
-        tab_inactive_bg: sidebar_override(|c| c.tab_inactive_bg.as_ref()),
-        tab_inactive_fg: sidebar_override(|c| c.tab_inactive_fg.as_ref()),
-        agent_active_bg: sidebar_override(|c| c.agent_active_bg.as_ref()),
-        agent_active_fg: sidebar_override(|c| c.agent_active_fg.as_ref()),
-        agent_inactive_bg: sidebar_override(|c| c.agent_inactive_bg.as_ref()),
-        agent_inactive_fg: sidebar_override(|c| c.agent_inactive_fg.as_ref()),
+        space_active_bg: theme_override(|c| c.space_active_bg.as_ref()),
+        space_active_fg: theme_override(|c| c.space_active_fg.as_ref()),
+        sidebar_divider: theme_override(|c| c.sidebar_divider.as_ref()),
+        pane_inactive_border: theme_override(|c| c.pane_inactive_border.as_ref()),
+        space_inactive_fg: theme_override(|c| c.space_inactive_fg.as_ref()),
+        space_selected_bg: theme_override(|c| c.space_selected_bg.as_ref()),
+        space_selected_fg: theme_override(|c| c.space_selected_fg.as_ref()),
+        tab_active_bg: theme_override(|c| c.tab_active_bg.as_ref()),
+        tab_active_fg: theme_override(|c| c.tab_active_fg.as_ref()),
+        tab_inactive_bg: theme_override(|c| c.tab_inactive_bg.as_ref()),
+        tab_inactive_fg: theme_override(|c| c.tab_inactive_fg.as_ref()),
+        agent_active_bg: theme_override(|c| c.agent_active_bg.as_ref()),
+        agent_active_fg: theme_override(|c| c.agent_active_fg.as_ref()),
+        agent_inactive_bg: theme_override(|c| c.agent_inactive_bg.as_ref()),
+        agent_inactive_fg: theme_override(|c| c.agent_inactive_fg.as_ref()),
     }
 }
 
@@ -2874,6 +2875,7 @@ mod tests {
         config.theme.auto_switch = true;
         config.theme.custom = Some(crate::config::CustomThemeColors {
             accent: Some("#010203".to_string()),
+            pane_inactive_border: Some("#040506".to_string()),
             ..Default::default()
         });
         let (_api_tx, api_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -2885,6 +2887,10 @@ mod tests {
         assert_eq!(
             app.state.palette.accent,
             ratatui::style::Color::Rgb(1, 2, 3)
+        );
+        assert_eq!(
+            app.state.pane_inactive_border(),
+            ratatui::style::Color::Rgb(4, 5, 6)
         );
     }
 

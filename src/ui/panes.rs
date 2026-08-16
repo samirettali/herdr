@@ -528,7 +528,7 @@ fn render_pane_borders(
         let color = if focused {
             app.palette.accent
         } else {
-            app.palette.overlay0
+            app.pane_inactive_border()
         };
         cell.set_style(Style::default().fg(color));
     }
@@ -695,7 +695,7 @@ fn render_pane_border_titles(
         let color = if info.is_focused {
             app.palette.accent
         } else {
-            app.palette.overlay0
+            app.pane_inactive_border()
         };
         let mut style = Style::default().fg(color);
         if info.is_focused {
@@ -1288,6 +1288,8 @@ mod tests {
         let mut app = AppState::test_new();
         app.mode = Mode::Terminal;
         app.pane_gaps = true;
+        let inactive_border = ratatui::style::Color::Rgb(1, 2, 3);
+        app.theme_runtime.pane_inactive_border = Some(inactive_border);
         app.view.terminal_area = Rect::new(0, 0, 4, 3);
         app.view.pane_infos = vec![
             PaneInfo {
@@ -1317,7 +1319,7 @@ mod tests {
 
         let buffer = terminal.backend().buffer();
         assert_eq!(buffer[(1, 1)].style().fg, Some(app.palette.accent));
-        assert_eq!(buffer[(2, 1)].style().fg, Some(app.palette.overlay0));
+        assert_eq!(buffer[(2, 1)].style().fg, Some(inactive_border));
     }
 
     #[tokio::test]

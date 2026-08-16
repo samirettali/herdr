@@ -24,8 +24,8 @@ the only line left is the sidebar divider.
 
 `[theme.custom]` upstream only exposes palette-wide tokens, so restyling one component drags
 every other user of that token along. This adds background and foreground pairs for the
-sidebar spaces, the agent panel and the tab bar, each falling back to the palette token that
-component used before:
+sidebar spaces, the agent panel and the tab bar, plus dedicated sidebar divider and inactive
+pane border colours. Each falls back to the palette token that component used before:
 
 ```toml
 [theme.custom]
@@ -43,11 +43,13 @@ tab_active_fg = "#ffffff"
 tab_inactive_bg = "#000000"
 tab_inactive_fg = "#888888"
 sidebar_divider = "#333333"
+pane_inactive_border = "#444444"
 ```
 
 Leaving `agent_inactive_bg` unset keeps those rows unpainted, the way they are upstream.
 Auto-named tabs keep their own dimmer foreground unless `tab_inactive_fg` is set, which then
-wins for both kinds of tab.
+wins for both kinds of tab. The focused pane border still uses `accent`; an unset
+`pane_inactive_border` keeps using `overlay0`.
 
 ### A `spacer` sidebar token
 
