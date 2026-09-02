@@ -7,7 +7,8 @@ changes.
 
 ## fork changes
 
-One commit per feature, kept separate so each can be rebased or dropped on its own. Every
+Based on upstream v0.8.2. One commit per feature, kept separate so each can be rebased or
+dropped on its own. None of these changes exist upstream as of the current `master`. Every
 option below defaults to the upstream behaviour, so an unchanged `config.toml` renders exactly
 like vanilla Herdr — except for the tab label, which gains the tab number.
 
