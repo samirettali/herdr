@@ -534,6 +534,9 @@ pub struct PaneInfo {
     pub cwd: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub foreground_cwd: Option<String>,
+    /// Executable name of the pane's foreground process group leader.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub foreground_process: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

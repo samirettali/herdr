@@ -120,6 +120,7 @@ pub(super) fn snapshot(
                 label: pane.label,
                 cwd: pane.cwd,
                 foreground_cwd: pane.foreground_cwd,
+                foreground_process: pane.foreground_process,
                 focused,
                 right_click_passthrough,
             }
