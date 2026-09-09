@@ -488,9 +488,9 @@ fn render_pane_borders(
         let cell = &mut buf[(x, y)];
         cell.set_symbol(symbol);
         let color = if focused {
-            app.palette.accent
+            app.palette.pane_active_border()
         } else {
-            app.palette.overlay0
+            app.palette.pane_inactive_border()
         };
         cell.set_style(Style::default().fg(color));
     }
@@ -655,9 +655,9 @@ fn render_pane_border_titles(
             continue;
         }
         let color = if info.is_focused {
-            app.palette.accent
+            app.palette.pane_active_border()
         } else {
-            app.palette.overlay0
+            app.palette.pane_inactive_border()
         };
         let mut style = Style::default().fg(color);
         if info.is_focused {
@@ -1135,6 +1135,10 @@ mod tests {
     fn gapped_pane_focus_does_not_color_neighbor_border() {
         let mut app = AppState::test_new();
         app.pane_gaps = true;
+        let active_border = ratatui::style::Color::Rgb(1, 2, 3);
+        let inactive_border = ratatui::style::Color::Rgb(4, 5, 6);
+        app.palette.components.pane_active_border = Some(active_border);
+        app.palette.components.pane_inactive_border = Some(inactive_border);
         app.view.terminal_area = Rect::new(0, 0, 4, 3);
         app.view.pane_infos = vec![
             PaneInfo {
@@ -1163,8 +1167,8 @@ mod tests {
             .unwrap();
 
         let buffer = terminal.backend().buffer();
-        assert_eq!(buffer[(1, 1)].style().fg, Some(app.palette.accent));
-        assert_eq!(buffer[(2, 1)].style().fg, Some(app.palette.overlay0));
+        assert_eq!(buffer[(1, 1)].style().fg, Some(active_border));
+        assert_eq!(buffer[(2, 1)].style().fg, Some(inactive_border));
     }
 
     #[tokio::test]
