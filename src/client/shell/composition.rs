@@ -287,7 +287,12 @@ impl ClientShellState {
         let mobile_navigate_panel = !layout.mobile_header.is_empty()
             && self.mode == ClientShellMode::Navigate
             && self.endpoint_error.is_none();
-        let mode_bar = if mobile_navigate_panel || self.overlay.is_some() {
+        // Prefix mode lasts one keystroke, so its hint bar flashes over the row
+        // below on every press. Off leaves that row alone.
+        let silent_prefix = self.mode == ClientShellMode::Prefix
+            && !self.config.prefix_hint
+            && self.endpoint_error.is_none();
+        let mode_bar = if mobile_navigate_panel || self.overlay.is_some() || silent_prefix {
             None
         } else {
             render::render_mode_bar(

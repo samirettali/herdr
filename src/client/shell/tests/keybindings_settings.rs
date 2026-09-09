@@ -208,6 +208,38 @@ detach = "prefix+x"
 }
 
 #[test]
+fn prefix_hint_off_leaves_the_row_below_untouched() {
+    let config = toml::from_str::<Config>(
+        r#"
+[ui]
+prefix_hint = false
+"#,
+    )
+    .expect("configured ui");
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    state.set_snapshot(Box::new(snapshot()));
+    state.set_pane_surface(surface());
+
+    let prefix = state.handle_input_bytes(&[0x02]);
+    assert!(prefix.requests.is_empty(), "prefix mode is still armed");
+    let frame = state.compose(106, 20).expect("prefix frame");
+    let text = frame
+        .cells
+        .chunks(frame.width as usize)
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.symbol.as_str())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(!text.contains("PREFIX"), "frame: {text:?}");
+    assert!(!text.contains("send prefix"), "frame: {text:?}");
+
+    assert_eq!(state.mode, ClientShellMode::Prefix);
+}
+
+#[test]
 fn prefix_endpoint_action_uses_public_api_with_stable_ids() {
     let mut config = Config::default();
     config.ui.prompt_new_tab_name = false;

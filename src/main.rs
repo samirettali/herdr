@@ -284,6 +284,11 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Ask for a workspace name before interactive creation.
 # prompt_new_workspace_name = false
 
+# Draw the one-line hint bar while prefix mode is armed ("PREFIX  esc cancel  ...").
+# Prefix mode lasts a single keystroke, so that bar flashes over the row below, usually
+# the tab bar, on every press. False leaves the row untouched.
+# prefix_hint = true
+
 # Draw borders around split panes.
 # "auto" draws them only for split panes, "always" also frames a lone pane
 # (only while pane_outer_borders is enabled), "off" disables them.
