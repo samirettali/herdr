@@ -1,85 +1,112 @@
-# herdr
+# herdr, patched
 
+A fork of [herdr](https://github.com/herdrdev/herdr), the terminal workspace that keeps several
+coding agents visible at once and tells you which one is waiting for you. Docs, install and
+everything else: [herdr.dev](https://herdr.dev). This README covers only what this branch
+changes.
 
-<p align="center">
-  <img src="assets/logo.png" alt="herdr" width="100" />
-</p>
+## fork changes
 
-<p align="center">
-  <a href="https://herdr.dev">herdr.dev</a> · <a href="#install">install</a> · <a href="https://herdr.dev/docs/quick-start/">quick start</a> · <a href="https://herdr.dev/docs/">docs</a>
-</p>
+Branch `patched` tracks upstream `master` rather than a release tag, the same way the NUR
+package does: the multi-machine work landed in 0.9.0 and its fixes keep arriving on `master`.
+One commit per feature, kept separate so each can be rebased or dropped on its own. Every
+option below defaults to the upstream behaviour, so an unchanged `config.toml` renders exactly
+like vanilla Herdr.
 
-<p align="center">
-  English · <a href="README.zh-CN.md">简体中文</a>
-</p>
+Earlier versions of this fork carried more: a `spacer` sidebar token, tab labels from tokens,
+tab row spacing, `sidebar_position`, `restore_commands`, sidebar space and agent colours. Those
+were dropped in the rewrite for 0.9: upstream now styles every sidebar token inline
+(`{ token = "workspace", fg = "#bbbbbb" }`), paints active rows with `active_row_bg`, and the
+rest was not worth carrying across a client/server split that rewrote the whole TUI. The old
+branch survives as `patched-0.8.2`.
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-666666?labelColor=333333" alt="Apache 2.0 license" /></a>
-  <a href="https://github.com/herdrdev/herdr/releases"><img src="https://img.shields.io/github/downloads/herdrdev/herdr/total?labelColor=333333&color=666666" alt="total GitHub release downloads" /></a>
-  <a href="https://github.com/herdrdev/herdr/stargazers"><img src="https://img.shields.io/github/stars/herdrdev/herdr?labelColor=333333&color=666666&logo=github" alt="GitHub stars" /></a>
-  <a href="https://github.com/herdrdev/herdr/releases/latest"><img src="https://img.shields.io/github/v/release/herdrdev/herdr?label=release&labelColor=333333&color=666666" alt="latest stable release" /></a>
-  <a href="https://formulae.brew.sh/formula/herdr"><img src="https://img.shields.io/homebrew/v/herdr?label=homebrew&labelColor=333333&color=666666" alt="Homebrew version" /></a>
-  <a href="https://x.com/herdrdev"><img src="https://img.shields.io/badge/follow-%40herdrdev-000000?logo=x&logoColor=white" alt="follow @herdrdev on X" /></a>
-</p>
+### Per-component theme colours
 
----
+`[theme.custom]` upstream only exposes palette-wide tokens, so restyling the active tab drags
+every other user of `accent` along, the focused pane border included. This adds colours for
+the two components that share tokens most awkwardly, the pane borders and the tab bar. Each
+falls back to the palette token that component used before, and each is also accepted in the
+`light` and `dark` tables:
 
-https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
+```toml
+[theme.custom]
+pane_active_border = "#858585"   # defaults to accent
+pane_inactive_border = "#444444" # defaults to overlay0
+tab_active_bg = "#000000"        # defaults to accent
+tab_active_fg = "#ffffff"        # defaults to the panel contrast colour
+tab_inactive_bg = "#000000"      # inactive tabs and scroll arrows, defaults to surface0
+tab_inactive_fg = "#888888"      # defaults to overlay1, overlay0 for auto-named tabs
+```
 
-**the runtime your coding agents live on.**
+Auto-named tabs keep their own dimmer foreground unless `tab_inactive_fg` is set, which then
+wins for both kinds of tab.
 
-- **detach without stopping work** — herdr keeps terminals running in a background server when you close the client or lose your SSH connection. after a server or machine restart, herdr restores the saved layout and can resume supported agent sessions; the original processes do not survive. [session state →](https://herdr.dev/docs/session-state/)
-- **several machines, one window** — keep local work and saved ssh machines together, with a combined agent list and independent reconnects. [remote machines →](https://herdr.dev/docs/connecting-machines/)
-- **never hunt for the stuck one** — every pane is marked working, blocked, or idle. when an agent stops and needs an answer, herdr says so.
-- **agent-native** — agents drive herdr through the cli and socket api: they can spawn panes, prompt each other, and wait until another agent is genuinely blocked. [agent skill →](https://herdr.dev/docs/agent-skill/)
-- **runs what you already run** — claude code, codex, cursor, opencode, grok and the rest. herdr doesn't wrap or replace them; it owns their terminals.
-- **keyboard and mouse, both first-class** — tmux-style prefix keys *and* click, drag, split. pick per moment, not per tool.
-- **plugins** — extend panes and workflows. [browse the marketplace →](https://herdr.dev/plugins/)
-- **one rust binary, no electron** — runs in whatever terminal you already use.
+### The prefix hint bar is optional
 
----
+Prefix mode lasts a single keystroke, and while it is armed a one-line bar is drawn over the
+bottom row of the pane area, the tab bar when it sits at the bottom. So every prefix press
+flashes a reminder of keys you already know over content you were reading:
+
+```toml
+[ui]
+prefix_hint = false
+```
+
+With it off nothing is drawn at all, badge included, and prefix mode is visible only from the
+next key not reaching the pane. The hint bars for copy, resize and navigate mode are untouched:
+those modes persist rather than flashing, so their reminder still earns its row.
+
+### Pane keys a program can keep for itself
+
+Bind the pane keys without a prefix and Herdr eats them everywhere, so `ctrl+h` never reaches
+the editor that wants it for its own splits. This is the missing half of what
+`vim-tmux-navigator` gets from tmux's `#{pane_current_command}` conditional:
+
+```toml
+[keys]
+focus_pane_left = "ctrl+h"
+focus_pane_down = "ctrl+j"
+focus_pane_up = "ctrl+k"
+focus_pane_right = "ctrl+l"
+passthrough_commands = ["nvim"]
+```
+
+While one of those executables is the focused pane's foreground process, a prefix-less
+`focus_pane_*` chord is forwarded to the pane instead of moving focus. The program navigates its
+own splits and calls `herdr pane focus --direction left` when it hits its edge, which is one
+keymap on the editor side:
+
+```lua
+for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
+  vim.keymap.set("n", "<C-" .. key .. ">", function()
+    local from = vim.api.nvim_get_current_win()
+    vim.cmd.wincmd(key)
+    if vim.api.nvim_get_current_win() == from then
+      vim.system({ "herdr", "pane", "focus", "--direction", direction })
+    end
+  end)
+end
+```
+
+Prefix bindings and every other action are untouched, so `prefix+h` still moves focus from
+inside `nvim` and a direct `ctrl+alt+g` custom command still fires. Matching is on the
+executable name, so a store path or any absolute path still matches a bare `nvim`.
+
+Since 0.9 the TUI is a client of a server that owns the panes, so the client cannot inspect
+the pane's processes itself. The server reports the foreground process group leader's
+executable as `foreground_process` on the pane info, next to `foreground_cwd`, and the client
+shell snapshot carries it. Only the leader is inspected, on each snapshot: it is the command
+the user typed, and nothing cached goes stale after a `:sh` or a `Ctrl-Z`. The snapshot is
+bincode, so the new field bumps the protocol version: a fork client and a vanilla server of
+the same version refuse each other rather than misread the stream.
 
 ## install
 
-```bash
-curl -fsSL https://herdr.dev/install.sh | sh
-```
-
-or `brew install herdr` · `mise use -g herdr` · windows: `powershell -ExecutionPolicy Bypass -c "irm https://herdr.dev/install.ps1 | iex"` · [endpoint-protected Windows](https://herdr.dev/docs/windows-beta/) · [binaries](https://github.com/herdrdev/herdr/releases)
-
-then start it where the work lives:
+Through Nix, override the source of the upstream package with this branch; the fork leaves
+`Cargo.lock` alone, so the vendored dependency hash still matches. Through Homebrew:
 
 ```bash
-herdr
+brew install samirettali/tap/herdr
 ```
 
-run your agents, split panes, walk away. `ctrl+b q` detaches, `herdr` reattaches. [quick start →](https://herdr.dev/docs/quick-start/)
-
-## docs
-
-everything lives at [herdr.dev/docs](https://herdr.dev/docs/): [quick start](https://herdr.dev/docs/quick-start/) · [concepts](https://herdr.dev/docs/concepts/) · [supported agents](https://herdr.dev/docs/agents/) · [keyboard](https://herdr.dev/docs/keyboard/) · [configuration](https://herdr.dev/docs/configuration/) · [session state](https://herdr.dev/docs/session-state/) · [connecting machines](https://herdr.dev/docs/connecting-machines/) · [remote](https://herdr.dev/docs/persistence-remote/) · [integrations](https://herdr.dev/docs/integrations/) · [plugins](https://herdr.dev/docs/plugins/) · [socket api](https://herdr.dev/docs/socket-api/)
-
-## thanks
-
-every past sponsor and backer is listed in [SPONSORS.md](./SPONSORS.md) — thank you 🐑
-
-enterprise / partnership: hey@herdr.dev
-
-## agent instructions
-
-if you are an ai agent helping with this repository, read [`AGENTS.md`](./AGENTS.md) before making changes and read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening issues or PRs.
-
-## development
-
-```bash
-git clone https://github.com/herdrdev/herdr
-cd herdr
-cargo build --release
-
-just test        # unit tests
-just check       # formatting, tests, and maintenance checks
-```
-
-## license
-
-Herdr is licensed under the [Apache License 2.0](LICENSE).
+The formula builds from source at a pinned revision of this branch.
