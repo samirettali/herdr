@@ -13,12 +13,64 @@ One commit per feature, kept separate so each can be rebased or dropped on its o
 option below defaults to the upstream behaviour, so an unchanged `config.toml` renders exactly
 like vanilla Herdr.
 
-Earlier versions of this fork carried more: a `spacer` sidebar token, tab labels from tokens,
-tab row spacing, `sidebar_position`, `restore_commands`, sidebar space and agent colours. Those
-were dropped in the rewrite for 0.9: upstream now styles every sidebar token inline
+Earlier versions of this fork carried more: tab labels from tokens, tab row spacing,
+`sidebar_position`, `restore_commands`, sidebar space and agent colours. Those were dropped in
+the rewrite for 0.9: upstream now styles every sidebar token inline
 (`{ token = "workspace", fg = "#bbbbbb" }`), paints active rows with `active_row_bg`, and the
 rest was not worth carrying across a client/server split that rewrote the whole TUI. The old
 branch survives as `patched-0.8.2`.
+
+### A `spacer` sidebar token
+
+Sidebar rows are already token lists. A `spacer` eats whatever width the other tokens of its
+row left over, so everything after it renders flush right, one column of gutter in from the
+edge to mirror the one on the left:
+
+```toml
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace", "spacer", "branch", "git_status"]]
+
+[ui.sidebar.agents]
+rows = [["state_icon", "machine", "workspace", "spacer", "tab"], ["agent"]]
+```
+
+Several spacers in one row split the slack evenly, which gives centring as well. In a sidebar
+too narrow for the row, spacers collapse to nothing and the layout falls back to upstream
+behaviour. A row of nothing but spacers is dropped like a row whose tokens went missing.
+
+### Git arrows before the branch
+
+`git_status` sits one blank from its neighbour on either side, where upstream only kept it
+tight after the branch. So `["git_status", "branch"]` reads `↑1 main` rather than
+`↑1 · main`, and the order of the row is the whole option.
+
+### Machine labels
+
+Saved machines show under the name `herdr machine add` recorded, and the local one is always
+`Local`. A mapping renames them in the sidebar only, for example to one Nerd Font glyph each so
+the rows line up:
+
+```toml
+[ui.sidebar.machines]
+labels = { local = "", andromeda = "", work = "" }
+```
+
+Keys are the saved names and match ignoring case. The label also feeds the `machine` token of
+the agent rows and the mobile switcher; the CLI, `herdr machine list` and status messages keep
+the saved name.
+
+### Collapsing a machine hides its agents
+
+Collapsing a machine folds its spaces but upstream keeps its agents in the agents panel. With
+
+```toml
+[ui.sidebar.machines]
+hide_agents_when_collapsed = true
+```
+
+a collapsed machine disappears whole: its agents leave the panel and the previous/next agent
+keys skip them, so a key never focuses something you cannot see. The mobile switcher has no
+collapsing and is unaffected.
 
 ### Per-component theme colours
 
