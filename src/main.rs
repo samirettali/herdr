@@ -367,6 +367,11 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # [ui.sidebar.agents.rows_by_agent]
 # claude = [["state_icon", "machine", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
 
+# Sidebar labels per saved machine name, for example Nerd Font glyphs so the rows line up.
+# The local machine is "local"; names match ignoring case. CLI and messages keep the saved name.
+# [ui.sidebar.machines]
+# labels = { local = "L", andromeda = "A" }
+
 # Expanded space rows. Built-ins are state_icon, state_text, workspace, branch, git_status,
 # and spacer.
 # Custom values reported through workspace metadata use a $name token, for example $jj_status.

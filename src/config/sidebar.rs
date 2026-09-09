@@ -484,11 +484,31 @@ impl Default for SpacesSidebarConfig {
     }
 }
 
+/// How saved machines are shown in the sidebar. The saved name stays what the
+/// CLI and messages use; only the sidebar label and the `machine` token change.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct MachinesSidebarConfig {
+    /// Sidebar label per saved machine name, for example a Nerd Font glyph.
+    /// The local machine is `local`. Names match ignoring ASCII case.
+    pub labels: BTreeMap<String, String>,
+}
+
+impl MachinesSidebarConfig {
+    pub(crate) fn display_label<'a>(&'a self, name: &'a str) -> &'a str {
+        self.labels
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map_or(name, |(_, label)| label.as_str())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SidebarConfig {
     pub agents: AgentsSidebarConfig,
     pub spaces: SpacesSidebarConfig,
+    pub machines: MachinesSidebarConfig,
 }
 
 #[cfg(test)]
@@ -668,6 +688,26 @@ rows = [[{ token = "$status", rules = [{ contains = "error", bold = true }] }]]
             let input = format!("[agents]\nrows = [[{{ token = 'machine', rules = [{rules}] }}]]");
             assert_eq!(toml::from_str::<SidebarConfig>(&input).is_ok(), count == 16);
         }
+    }
+
+    #[test]
+    fn machine_labels_map_saved_names_ignoring_case() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.machines]
+labels = { local = "L", andromeda = "A" }
+"#,
+        )
+        .expect("machine labels");
+        let machines = &config.ui.sidebar.machines;
+
+        assert_eq!(machines.display_label("Local"), "L");
+        assert_eq!(machines.display_label("andromeda"), "A");
+        assert_eq!(machines.display_label("work"), "work");
+        assert_eq!(
+            SidebarConfig::default().machines.display_label("Local"),
+            "Local"
+        );
     }
 
     #[test]

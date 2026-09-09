@@ -593,7 +593,7 @@ fn mobile_items(
                         Span::styled("  ", Style::default().bg(background)),
                         Span::styled(symbol, Style::default().fg(color).bg(background)),
                         Span::styled(
-                            format!(" {}", endpoint.label),
+                            format!(" {}", config.machines.display_label(&endpoint.label)),
                             Style::default()
                                 .fg(palette.text)
                                 .bg(background)
@@ -715,7 +715,10 @@ fn mobile_items(
                         Span::styled(" ", Style::default().bg(background)),
                         Span::styled(
                             crate::ui::truncate_end(
-                                &format!("{} · {primary}", endpoint.label),
+                                &format!(
+                                    "{} · {primary}",
+                                    config.machines.display_label(endpoint.label)
+                                ),
                                 usize::from(content_width.saturating_sub(5)),
                             ),
                             Style::default()
@@ -834,7 +837,10 @@ fn mobile_items(
                         Span::styled(" ", Style::default().bg(background)),
                         Span::styled(
                             crate::ui::truncate_end(
-                                &format!("{} · {name}", endpoint.label),
+                                &format!(
+                                    "{} · {name}",
+                                    config.machines.display_label(endpoint.label)
+                                ),
                                 usize::from(content_width.saturating_sub(if entry.indented {
                                     8
                                 } else {

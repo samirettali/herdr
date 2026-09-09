@@ -103,10 +103,14 @@ fn agent_rows(
         .iter()
         .filter_map(|endpoint| {
             endpoint.snapshot.as_deref().map(|snapshot| {
-                super::agent_sidebar::agent_rows(snapshot, config, Some(&endpoint.label))
-                    .into_iter()
-                    .map(|agent| ((endpoint.endpoint_id.clone(), agent.pane_id.clone()), agent))
-                    .collect::<Vec<_>>()
+                super::agent_sidebar::agent_rows(
+                    snapshot,
+                    config,
+                    Some(config.machines.display_label(&endpoint.label)),
+                )
+                .into_iter()
+                .map(|agent| ((endpoint.endpoint_id.clone(), agent.pane_id.clone()), agent))
+                .collect::<Vec<_>>()
             })
         })
         .flatten()
@@ -120,7 +124,10 @@ fn agent_rows(
             agent.focused &= row.endpoint.endpoint_id == active_endpoint_id;
             Some(EndpointAgentRow {
                 endpoint_id: row.endpoint.endpoint_id.clone(),
-                machine_label: row.endpoint.label.to_owned(),
+                machine_label: config
+                    .machines
+                    .display_label(row.endpoint.label)
+                    .to_owned(),
                 stale: row.endpoint.stale(),
                 agent,
             })

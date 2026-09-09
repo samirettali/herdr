@@ -1528,3 +1528,41 @@ fn navigator_foreign_tab_selection_keeps_the_tab_target() {
         }] if activated == &endpoint_id && tab_id == "tab_1"
     ));
 }
+
+#[test]
+fn machine_labels_replace_saved_names_in_the_sidebar_only() {
+    let config = toml::from_str::<Config>(
+        r#"
+[ui.sidebar.machines]
+labels = { local = "L", build = "B" }
+"#,
+    )
+    .expect("machine labels");
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    let profile = remote_profile();
+    let endpoint_id = ClientEndpointId::Ssh(profile.id.clone());
+    state.set_endpoint_catalog(&[profile]);
+    state.set_endpoint_status(&endpoint_id, ClientEndpointStatus::Online);
+    state.set_snapshot(Box::new(snapshot()));
+    state.set_pane_surface(surface());
+    let mut remote = snapshot();
+    remote.boot_id = "remote-boot".into();
+    state.set_endpoint_snapshot(&endpoint_id, Box::new(remote));
+
+    let frame = state.compose(100, 28).expect("labelled endpoint frame");
+    let text = frame
+        .cells
+        .chunks(frame.width as usize)
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.symbol.as_str())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("▾ L "), "frame: {text:?}");
+    assert!(text.contains("▾ B "), "frame: {text:?}");
+    assert!(!text.contains("Local"), "frame: {text:?}");
+    assert!(!text.contains("Build"), "frame: {text:?}");
+    assert_eq!(state.endpoint_label(&endpoint_id), "Build");
+}
