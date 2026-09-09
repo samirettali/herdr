@@ -21,6 +21,7 @@ pub(crate) enum ResolvedTokenKind {
     TerminalTitle(String),
     Branch(String),
     GitStatus { ahead: usize, behind: usize },
+    Spacer,
     Custom(String),
 }
 
@@ -36,7 +37,7 @@ impl ResolvedTokenKind {
             | Self::TerminalTitle(value)
             | Self::Branch(value)
             | Self::Custom(value) => Some(value),
-            Self::StateIcon | Self::GitStatus { .. } => None,
+            Self::StateIcon | Self::GitStatus { .. } | Self::Spacer => None,
         }
     }
 }
@@ -103,6 +104,7 @@ pub(crate) fn agent_rows(
                         AgentSidebarToken::TerminalTitleStripped => context
                             .terminal_title_stripped
                             .map(|value| ResolvedTokenKind::TerminalTitle(value.to_string())),
+                        AgentSidebarToken::Spacer => Some(ResolvedTokenKind::Spacer),
                         AgentSidebarToken::Custom(name) => context
                             .tokens
                             .get(name)
@@ -116,7 +118,7 @@ pub(crate) fn agent_rows(
                     Some(ResolvedToken::new(kind, style))
                 })
                 .collect::<Vec<_>>();
-            (!resolved.is_empty()).then_some(resolved)
+            has_content(&resolved).then_some(resolved)
         })
         .collect()
 }
@@ -159,6 +161,7 @@ pub(crate) fn space_rows(
                             .filter(|(ahead, behind)| *ahead > 0 || *behind > 0)
                             .map(|(ahead, behind)| ResolvedTokenKind::GitStatus { ahead, behind }),
                         SpaceSidebarToken::GitStatus => None,
+                        SpaceSidebarToken::Spacer => Some(ResolvedTokenKind::Spacer),
                         SpaceSidebarToken::Custom(name) => context
                             .tokens
                             .get(name)
@@ -172,13 +175,25 @@ pub(crate) fn space_rows(
                     Some(ResolvedToken::new(kind, style))
                 })
                 .collect::<Vec<_>>();
-            (!resolved.is_empty()).then_some(resolved)
+            has_content(&resolved).then_some(resolved)
         })
         .collect()
 }
 
+/// A row of nothing but spacers would render as blank padding, so it is elided
+/// like a row whose only tokens went missing.
+fn has_content(resolved: &[ResolvedToken]) -> bool {
+    resolved
+        .iter()
+        .any(|token| !matches!(token.kind, ResolvedTokenKind::Spacer))
+}
+
 pub(crate) fn separator(previous: &ResolvedToken, current: &ResolvedToken) -> &'static str {
-    if matches!(previous.kind, ResolvedTokenKind::StateIcon)
+    if matches!(previous.kind, ResolvedTokenKind::Spacer)
+        || matches!(current.kind, ResolvedTokenKind::Spacer)
+    {
+        ""
+    } else if matches!(previous.kind, ResolvedTokenKind::StateIcon)
         || matches!(current.kind, ResolvedTokenKind::GitStatus { .. })
     {
         " "

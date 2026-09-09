@@ -211,6 +211,21 @@ pub(crate) fn resolved_token_spans(
             break;
         }
     }
+    // Spacers split whatever the real tokens left over, so the tokens after
+    // them end flush right. One column stays empty to mirror the gutter every
+    // row already has on the left.
+    let spacers = visible_indices
+        .iter()
+        .copied()
+        .filter(|index| matches!(resolved[*index].kind, ResolvedTokenKind::Spacer))
+        .collect::<Vec<_>>();
+    if !spacers.is_empty() {
+        let fill = remaining.saturating_sub(1);
+        for (position, index) in spacers.iter().copied().enumerate() {
+            budgets[index] = fill / spacers.len()
+                + usize::from(position + 1 == spacers.len()) * (fill % spacers.len());
+        }
+    }
 
     let mut spans = Vec::new();
     for (position, index) in visible_indices.iter().copied().enumerate() {
@@ -265,6 +280,9 @@ pub(crate) fn resolved_token_spans(
                     ));
                 }
             }
+            ResolvedTokenKind::Spacer => {
+                spans.push(Span::raw(" ".repeat(budgets[index])));
+            }
             ResolvedTokenKind::TerminalTitle(text) | ResolvedTokenKind::Custom(text) => {
                 spans.push(Span::styled(
                     truncate_end(text, budgets[index]),
@@ -295,4 +313,58 @@ fn apply_token_style(mut style: Style, patch: crate::config::SidebarTokenStyle) 
         };
     }
     style
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tokens::{ResolvedToken, ResolvedTokenKind};
+    use super::*;
+
+    fn row_text(resolved: &[ResolvedToken], max_width: usize) -> String {
+        let style = Style::default();
+        resolved_token_spans(
+            resolved,
+            ("●", style),
+            style,
+            style,
+            style,
+            style,
+            &Palette::catppuccin(),
+            max_width,
+        )
+        .iter()
+        .map(|span| span.content.as_ref())
+        .collect()
+    }
+
+    #[test]
+    fn spacer_pushes_following_tokens_flush_right() {
+        let resolved = vec![
+            ResolvedToken::unstyled(ResolvedTokenKind::Workspace("one".into())),
+            ResolvedToken::unstyled(ResolvedTokenKind::Spacer),
+            ResolvedToken::unstyled(ResolvedTokenKind::Branch("main".into())),
+        ];
+        let text = row_text(&resolved, 20);
+
+        assert_eq!(
+            display_width(&text),
+            19,
+            "one column of right gutter: {text:?}"
+        );
+        assert!(text.starts_with("one "), "rendered row: {text:?}");
+        assert!(text.ends_with("main"), "rendered row: {text:?}");
+        assert!(!text.contains('·'), "rendered row: {text:?}");
+    }
+
+    #[test]
+    fn spacer_collapses_when_the_row_is_already_full() {
+        let resolved = vec![
+            ResolvedToken::unstyled(ResolvedTokenKind::Workspace("workspace".into())),
+            ResolvedToken::unstyled(ResolvedTokenKind::Spacer),
+            ResolvedToken::unstyled(ResolvedTokenKind::Branch("main".into())),
+        ];
+        let text = row_text(&resolved, 13);
+
+        assert_eq!(text, "workspacemain");
+    }
 }
