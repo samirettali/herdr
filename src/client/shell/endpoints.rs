@@ -268,6 +268,15 @@ impl ClientShellState {
         self.endpoint_label(&self.active_endpoint_id)
     }
 
+    /// Machines whose agents are left out of the agents panel and of agent
+    /// navigation: the collapsed ones, when `hide_agents_when_collapsed` is on.
+    pub(super) fn hidden_agent_endpoints(&self) -> Option<&HashSet<ClientEndpointId>> {
+        self.config
+            .machines
+            .hide_agents_when_collapsed
+            .then_some(&self.collapsed_endpoints)
+    }
+
     pub(crate) fn endpoint_is_active(&self, endpoint_id: &ClientEndpointId) -> bool {
         &self.active_endpoint_id == endpoint_id
     }

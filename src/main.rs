@@ -371,6 +371,8 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # The local machine is "local"; names match ignoring case. CLI and messages keep the saved name.
 # [ui.sidebar.machines]
 # labels = { local = "L", andromeda = "A" }
+# Collapsing a machine also drops its agents from the agents panel and from agent navigation.
+# hide_agents_when_collapsed = false
 
 # Expanded space rows. Built-ins are state_icon, state_text, workspace, branch, git_status,
 # and spacer.

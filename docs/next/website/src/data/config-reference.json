@@ -1193,6 +1193,12 @@
           "description": "Sidebar label per saved machine name, for example a Nerd Font glyph. The local machine is local; names match ignoring ASCII case. The CLI and messages keep the saved name."
         },
         {
+          "key": "ui.sidebar.machines.hide_agents_when_collapsed",
+          "type": "boolean",
+          "default": "false",
+          "description": "Collapsing a machine also drops its agents from the agents panel and from agent navigation."
+        },
+        {
           "key": "ui.sidebar.spaces.row_gap",
           "type": "integer",
           "default": "0",

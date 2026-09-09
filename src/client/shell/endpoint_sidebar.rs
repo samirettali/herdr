@@ -192,6 +192,7 @@ pub(super) fn render_collapsed(
         state.endpoints,
         state.active_endpoint_id,
         config,
+        hidden_agent_endpoints(state, config),
         hits,
     );
     hits.sidebar_toggle = if area.is_empty() || workspace_area.width == 0 {
@@ -518,6 +519,7 @@ pub(super) fn render_expanded(
         state.endpoints,
         state.active_endpoint_id,
         config,
+        hidden_agent_endpoints(state, config),
         state.agent_scroll,
         hits,
     );
@@ -535,6 +537,17 @@ pub(super) fn render_expanded(
         "«",
         Style::default().fg(palette.overlay0),
     );
+}
+
+/// See `ClientShellState::hidden_agent_endpoints`; this is the render-time twin.
+fn hidden_agent_endpoints<'a>(
+    state: &ShellRenderState<'a>,
+    config: &ClientShellConfig,
+) -> Option<&'a HashSet<ClientEndpointId>> {
+    config
+        .machines
+        .hide_agents_when_collapsed
+        .then_some(state.collapsed_endpoints)
 }
 
 fn active_endpoint_label<'a>(state: &'a ShellRenderState<'_>) -> &'a str {

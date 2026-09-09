@@ -1566,3 +1566,75 @@ labels = { local = "L", build = "B" }
     assert!(!text.contains("Build"), "frame: {text:?}");
     assert_eq!(state.endpoint_label(&endpoint_id), "Build");
 }
+
+#[test]
+fn collapsing_a_machine_hides_its_agents_when_asked() {
+    let config = toml::from_str::<Config>(
+        r#"
+[ui.sidebar.machines]
+hide_agents_when_collapsed = true
+"#,
+    )
+    .expect("machine config");
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    let profile = remote_profile();
+    let endpoint_id = ClientEndpointId::Ssh(profile.id.clone());
+    state.set_endpoint_catalog(&[profile]);
+    state.set_endpoint_status(&endpoint_id, ClientEndpointStatus::Online);
+    state.set_snapshot(Box::new(snapshot()));
+    state.set_pane_surface(surface());
+    let mut remote = snapshot();
+    remote.boot_id = "remote-boot".into();
+    remote.agents = vec![ClientShellAgent {
+        pane_id: "pane_1".into(),
+        workspace_id: "ws_1".into(),
+        tab_id: "tab_1".into(),
+        name: Some("remote-agent".into()),
+        display_agent: None,
+        agent: None,
+        title: None,
+        terminal_title: None,
+        terminal_title_stripped: None,
+        agent_status: AgentStatus::Idle,
+        state_change_seq: 1,
+        state_labels: Vec::new(),
+        tokens: Vec::new(),
+        focused: true,
+    }];
+    state.set_endpoint_snapshot(&endpoint_id, Box::new(remote));
+
+    state.compose(100, 28).expect("expanded machine frame");
+    assert!(
+        state
+            .hits
+            .endpoint_agents
+            .iter()
+            .any(|(_, id, _)| id == &endpoint_id),
+        "an expanded machine lists its agents"
+    );
+
+    state.collapsed_endpoints.insert(endpoint_id.clone());
+    state.compose(100, 28).expect("collapsed machine frame");
+    assert!(
+        !state
+            .hits
+            .endpoint_agents
+            .iter()
+            .any(|(_, id, _)| id == &endpoint_id),
+        "a collapsed machine keeps its agents out of the panel"
+    );
+    assert!(state.hidden_agent_endpoints().is_some());
+
+    state.config.machines.hide_agents_when_collapsed = false;
+    state
+        .compose(100, 28)
+        .expect("collapsed machine frame, option off");
+    assert!(
+        state
+            .hits
+            .endpoint_agents
+            .iter()
+            .any(|(_, id, _)| id == &endpoint_id),
+        "off, collapsing only folds the workspaces"
+    );
+}
