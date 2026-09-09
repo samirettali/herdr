@@ -380,6 +380,8 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Blank rows between space entries. Set to 1 to restore the previous spacing.
 # row_gap = 0
 # rows = [["state_icon", "workspace"], ["branch", "git_status"]]
+# git_status sits one blank from its neighbour on either side, so ["git_status", "branch"]
+# puts the arrows before the branch name.
 
 # Background notification popup delivery
 [ui.toast]

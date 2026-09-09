@@ -193,8 +193,10 @@ pub(crate) fn separator(previous: &ResolvedToken, current: &ResolvedToken) -> &'
         || matches!(current.kind, ResolvedTokenKind::Spacer)
     {
         ""
-    } else if matches!(previous.kind, ResolvedTokenKind::StateIcon)
-        || matches!(current.kind, ResolvedTokenKind::GitStatus { .. })
+    } else if matches!(
+        previous.kind,
+        ResolvedTokenKind::StateIcon | ResolvedTokenKind::GitStatus { .. }
+    ) || matches!(current.kind, ResolvedTokenKind::GitStatus { .. })
     {
         " "
     } else {
