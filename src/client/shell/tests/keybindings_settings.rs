@@ -165,6 +165,47 @@ fn tab_bar_renders_endpoint_status_ellipses_and_clamps_to_useful_scroll() {
 }
 
 #[test]
+fn tab_bar_uses_component_colors_over_palette_tokens() {
+    let mut projected = snapshot();
+    projected.tabs.push(ClientShellTab {
+        tab_id: "tab_2".into(),
+        workspace_id: "ws_1".into(),
+        number: 2,
+        label: "2".into(),
+        custom_label: false,
+        zoomed: false,
+        focused: false,
+        agent_status: AgentStatus::Idle,
+    });
+    let config = toml::from_str::<Config>(
+        r##"
+[theme.custom]
+tab_active_bg = "#010203"
+tab_active_fg = "#040506"
+tab_inactive_bg = "#070809"
+tab_inactive_fg = "#0a0b0c"
+"##,
+    )
+    .expect("configured theme");
+    let mut config = ClientShellConfig::from_config(&config);
+    config.mobile_width_threshold = 0;
+    let mut state = ClientShellState::new(config);
+    state.set_snapshot(Box::new(projected));
+    state.set_pane_surface(surface());
+    let frame = state.compose(106, 20).expect("tab frame");
+    let buffer = frame.to_ratatui_buffer().expect("frame should reconstruct");
+
+    let tab_bar_y = state.hits.tabs[0].0.y;
+    let active = state.hits.tabs[0].0.x + 1;
+    let inactive = state.hits.tabs[1].0.x + 1;
+    let rgb = |r, g, b| ratatui::style::Color::Rgb(r, g, b);
+    assert_eq!(buffer[(active, tab_bar_y)].bg, rgb(1, 2, 3));
+    assert_eq!(buffer[(active, tab_bar_y)].fg, rgb(4, 5, 6));
+    assert_eq!(buffer[(inactive, tab_bar_y)].bg, rgb(7, 8, 9));
+    assert_eq!(buffer[(inactive, tab_bar_y)].fg, rgb(10, 11, 12));
+}
+
+#[test]
 fn configured_prefix_is_client_owned_and_renders_its_bar() {
     let config = toml::from_str::<Config>(
         r#"

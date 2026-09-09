@@ -79,7 +79,7 @@ pub(crate) fn render_tab_bar(
                 } else {
                     palette.overlay0
                 })
-                .bg(palette.surface0),
+                .bg(palette.tab_inactive_bg()),
         );
         x = hits.tab_scroll_left.right();
         content
@@ -102,19 +102,21 @@ pub(crate) fn render_tab_bar(
         let rect = Rect::new(x, area.y, width, 1);
         let style = if tab.focused {
             let base = Style::default()
-                .fg(panel_contrast_fg(palette))
-                .bg(palette.accent);
+                .fg(palette.tab_active_fg(panel_contrast_fg(palette)))
+                .bg(palette.tab_active_bg());
             if tab.custom_label {
                 base.add_modifier(Modifier::BOLD)
             } else {
                 base
             }
         } else if tab.custom_label {
-            Style::default().fg(palette.overlay1).bg(palette.surface0)
+            Style::default()
+                .fg(palette.tab_inactive_fg(palette.overlay1))
+                .bg(palette.tab_inactive_bg())
         } else {
             Style::default()
-                .fg(palette.overlay0)
-                .bg(palette.surface0)
+                .fg(palette.tab_inactive_fg(palette.overlay0))
+                .bg(palette.tab_inactive_bg())
                 .add_modifier(Modifier::DIM)
         };
         let padding = width.saturating_sub(display_width(&name));
@@ -150,7 +152,7 @@ pub(crate) fn render_tab_bar(
                 } else {
                     palette.overlay0
                 })
-                .bg(palette.surface0),
+                .bg(palette.tab_inactive_bg()),
         );
         hits.new_tab = Rect::new(
             hits.tab_scroll_right.right(),

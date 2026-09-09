@@ -119,6 +119,18 @@ pub struct CustomThemeColors {
     pub blue: Option<String>,
     pub teal: Option<String>,
     pub peach: Option<String>,
+    /// Border of the focused pane. Defaults to `accent`.
+    pub pane_active_border: Option<String>,
+    /// Borders of panes that do not have focus. Defaults to `overlay0`.
+    pub pane_inactive_border: Option<String>,
+    /// Background of the active tab. Defaults to `accent`.
+    pub tab_active_bg: Option<String>,
+    /// Foreground of the active tab label. Defaults to the panel contrast color.
+    pub tab_active_fg: Option<String>,
+    /// Background of inactive tabs and the tab bar scroll arrows. Defaults to `surface0`.
+    pub tab_inactive_bg: Option<String>,
+    /// Foreground of inactive tab labels. Defaults to `overlay1`, `overlay0` for auto-named tabs.
+    pub tab_inactive_fg: Option<String>,
     /// Overrides applied when `auto_switch` selects a light appearance.
     pub light: Option<ModeThemeColors>,
     /// Overrides applied when `auto_switch` selects a dark appearance.
@@ -148,6 +160,12 @@ pub struct ModeThemeColors {
     pub blue: Option<String>,
     pub teal: Option<String>,
     pub peach: Option<String>,
+    pub pane_active_border: Option<String>,
+    pub pane_inactive_border: Option<String>,
+    pub tab_active_bg: Option<String>,
+    pub tab_active_fg: Option<String>,
+    pub tab_inactive_bg: Option<String>,
+    pub tab_inactive_fg: Option<String>,
 }
 
 /// Parse a color string into a ratatui Color.
@@ -339,6 +357,25 @@ active_row_bg = "#131415"
         assert_eq!(dark.panel_bg.as_deref(), Some("#0a0b0c"));
         assert_eq!(dark.sidebar_bg.as_deref(), Some("#0d0e0f"));
         assert_eq!(dark.active_row_bg.as_deref(), Some("#131415"));
+    }
+
+    #[test]
+    fn theme_component_overrides_parse() {
+        let toml = r##"
+[theme.custom]
+pane_active_border = "#010203"
+tab_inactive_fg = "#040506"
+
+[theme.custom.light]
+tab_active_bg = "#070809"
+"##;
+        let config: Config = toml::from_str(toml).unwrap();
+        let custom = config.theme.custom.as_ref().unwrap();
+        assert_eq!(custom.pane_active_border.as_deref(), Some("#010203"));
+        assert_eq!(custom.tab_inactive_fg.as_deref(), Some("#040506"));
+        assert!(custom.pane_inactive_border.is_none());
+        let light = custom.light.as_ref().unwrap();
+        assert_eq!(light.tab_active_bg.as_deref(), Some("#070809"));
     }
 
     #[test]

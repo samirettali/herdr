@@ -173,6 +173,42 @@
           "description": "Override the peach color token on top of the base theme. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
         },
         {
+          "key": "theme.custom.pane_active_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Border of the focused pane. Defaults to accent."
+        },
+        {
+          "key": "theme.custom.pane_inactive_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Borders of panes that do not have focus. Defaults to overlay0."
+        },
+        {
+          "key": "theme.custom.tab_active_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of the active tab. Defaults to accent."
+        },
+        {
+          "key": "theme.custom.tab_active_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of the active tab label. Defaults to the panel contrast color."
+        },
+        {
+          "key": "theme.custom.tab_inactive_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of inactive tabs and the tab bar scroll arrows. Defaults to surface0."
+        },
+        {
+          "key": "theme.custom.tab_inactive_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of inactive tab labels. Defaults to overlay1, overlay0 for auto-named tabs."
+        },
+        {
           "key": "theme.custom.light.accent",
           "type": "color",
           "default": "unset",
@@ -287,6 +323,42 @@
           "description": "Override the peach color token when auto_switch selects a light appearance. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
         },
         {
+          "key": "theme.custom.light.pane_active_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Border of the focused pane when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.light.pane_inactive_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Borders of unfocused panes when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.light.tab_active_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of the active tab when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.light.tab_active_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of the active tab label when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.light.tab_inactive_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of inactive tabs when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.light.tab_inactive_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of inactive tab labels when auto_switch selects a light appearance. Applied after theme.custom."
+        },
+        {
           "key": "theme.custom.dark.accent",
           "type": "color",
           "default": "unset",
@@ -399,6 +471,42 @@
           "type": "color",
           "default": "unset",
           "description": "Override the peach color token when auto_switch selects a dark appearance. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
+          "key": "theme.custom.dark.pane_active_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Border of the focused pane when auto_switch selects a dark appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.dark.pane_inactive_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Borders of unfocused panes when auto_switch selects a dark appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.dark.tab_active_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of the active tab when auto_switch selects a dark appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.dark.tab_active_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of the active tab label when auto_switch selects a dark appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.dark.tab_inactive_bg",
+          "type": "color",
+          "default": "unset",
+          "description": "Background of inactive tabs when auto_switch selects a dark appearance. Applied after theme.custom."
+        },
+        {
+          "key": "theme.custom.dark.tab_inactive_fg",
+          "type": "color",
+          "default": "unset",
+          "description": "Foreground of inactive tab labels when auto_switch selects a dark appearance. Applied after theme.custom."
         }
       ]
     },

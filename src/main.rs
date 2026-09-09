@@ -90,6 +90,14 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # accent = "#f5c2e7"
 # red = "#ff6188"
 # green = "#a6e3a1"
+# Per-component colors. Each falls back to the palette token that component
+# used before, so restyling one component leaves the others alone.
+# pane_active_border = "#f5c2e7"   # focused pane border, defaults to accent
+# pane_inactive_border = "#45475a" # other pane borders, defaults to overlay0
+# tab_active_bg = "#f5c2e7"        # defaults to accent
+# tab_active_fg = "#1e1e2e"        # defaults to the panel contrast color
+# tab_inactive_bg = "#313244"      # inactive tabs and scroll arrows, defaults to surface0
+# tab_inactive_fg = "#7f849c"      # defaults to overlay1, overlay0 for auto-named tabs
 
 # Layer appearance-specific overrides on top when auto_switch is enabled.
 # [theme.custom.light]
