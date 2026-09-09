@@ -492,6 +492,9 @@ pub struct MachinesSidebarConfig {
     /// Sidebar label per saved machine name, for example a Nerd Font glyph.
     /// The local machine is `local`. Names match ignoring ASCII case.
     pub labels: BTreeMap<String, String>,
+    /// Drop the agents of a collapsed machine from the agents panel and from
+    /// agent navigation, so collapsing a machine hides it whole. Default: false.
+    pub hide_agents_when_collapsed: bool,
 }
 
 impl MachinesSidebarConfig {

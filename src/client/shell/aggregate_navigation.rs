@@ -53,10 +53,13 @@ pub(super) struct AggregateAgentTarget {
     pub(super) pane_id: String,
 }
 
+/// `hidden` lists the machines whose agents stay out of the panel and out of
+/// agent navigation: the collapsed ones, when the user asked for that.
 pub(super) fn aggregate_agent_rows<'a>(
     endpoints: &'a [ClientShellEndpoint],
     active_endpoint_id: &ClientEndpointId,
     sort: crate::config::AgentPanelSortConfig,
+    hidden: Option<&HashSet<ClientEndpointId>>,
 ) -> Vec<AggregateAgentRow<'a>> {
     let active_index = endpoints
         .iter()
@@ -82,6 +85,7 @@ pub(super) fn aggregate_agent_rows<'a>(
 
     if let Some(Ok(view)) = active_view {
         let mut rows = cached_endpoint_snapshots(endpoints)
+            .filter(|endpoint| !hidden.is_some_and(|hidden| hidden.contains(endpoint.endpoint_id)))
             .flat_map(|endpoint| {
                 endpoint
                     .snapshot
@@ -131,6 +135,7 @@ pub(super) fn aggregate_agent_rows<'a>(
     }
 
     let mut rows = cached_endpoint_snapshots(endpoints)
+        .filter(|endpoint| !hidden.is_some_and(|hidden| hidden.contains(endpoint.endpoint_id)))
         .flat_map(|endpoint| {
             super::agent_sidebar::ordered_agent_pane_ids(endpoint.snapshot, sort)
                 .into_iter()
@@ -264,8 +269,9 @@ pub(super) fn online_agent_targets(
     endpoints: &[ClientShellEndpoint],
     active_endpoint_id: &ClientEndpointId,
     sort: crate::config::AgentPanelSortConfig,
+    hidden: Option<&HashSet<ClientEndpointId>>,
 ) -> Vec<AggregateAgentTarget> {
-    aggregate_agent_rows(endpoints, active_endpoint_id, sort)
+    aggregate_agent_rows(endpoints, active_endpoint_id, sort, hidden)
         .into_iter()
         .filter(|row| !row.endpoint.stale())
         .map(|row| AggregateAgentTarget {
