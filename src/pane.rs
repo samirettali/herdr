@@ -3320,6 +3320,41 @@ impl PaneRuntime {
         }
     }
 
+    /// Executable name of the process group leader controlling the pane PTY,
+    /// which is the command the user typed. Only the leader is inspected, so
+    /// this costs two process queries and nothing cached can go stale after a
+    /// `:sh` or a `Ctrl-Z`.
+    pub fn foreground_process(&self) -> Option<String> {
+        #[cfg(unix)]
+        {
+            let pid = self.child_pid.load(Ordering::Acquire);
+            let foreground_pgid = self
+                .io
+                .foreground_process_group_id()
+                .or_else(|| crate::platform::foreground_process_group_id(pid))?;
+            let leader = crate::detect::foreground_group_leader_job(foreground_pgid)?
+                .processes
+                .into_iter()
+                .next()?;
+            let raw = leader
+                .argv
+                .as_deref()
+                .and_then(<[String]>::first)
+                .cloned()
+                .or(leader.argv0)
+                .unwrap_or(leader.name);
+            std::path::Path::new(&raw)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_string)
+        }
+
+        #[cfg(not(unix))]
+        {
+            None
+        }
+    }
+
     /// Get the current working directory of the process group controlling the pane PTY.
     pub fn foreground_cwd(&self) -> Option<std::path::PathBuf> {
         #[cfg(unix)]

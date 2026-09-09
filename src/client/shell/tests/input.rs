@@ -453,6 +453,62 @@ fn pixel_host_reports_use_cells_without_target_pixel_mode_and_release_outside() 
     assert!(state.pane_mouse_gesture.is_none());
 }
 
+fn passthrough_state(listed: &str, foreground: Option<&str>) -> ClientShellState {
+    let config = toml::from_str::<Config>(&format!(
+        r#"
+[keys]
+focus_pane_left = "alt+h"
+toggle_sidebar = "alt+b"
+passthrough_commands = [{listed:?}]
+"#
+    ))
+    .expect("configured keybinds");
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    let mut snapshot = snapshot();
+    snapshot.panes[0].foreground_process = foreground.map(str::to_string);
+    state.set_snapshot(Box::new(snapshot));
+    state
+}
+
+#[test]
+fn direct_focus_pane_key_reaches_a_listed_foreground_command() {
+    let mut state = passthrough_state("nvim", Some("nvim"));
+
+    let outcome = state.handle_input_bytes(b"\x1bh");
+
+    assert!(outcome.actions.is_empty(), "focus must stay with the pane");
+    let [ClientMessage::ClientShellPaneInput { pane_id, .. }] = &outcome.requests[..] else {
+        panic!("a listed foreground command should receive the key itself");
+    };
+    assert_eq!(pane_id, "pane_1");
+}
+
+#[test]
+fn direct_focus_pane_key_stays_with_herdr_for_an_unlisted_command() {
+    let mut state = passthrough_state("nvim", Some("fish"));
+
+    let outcome = state.handle_input_bytes(b"\x1bh");
+
+    assert!(
+        outcome.requests.is_empty(),
+        "the key must not reach the pane"
+    );
+    assert!(!outcome.actions.is_empty(), "the chord still moves focus");
+}
+
+#[test]
+fn direct_non_focus_key_is_never_passed_through() {
+    let mut state = passthrough_state("nvim", Some("nvim"));
+
+    let outcome = state.handle_input_bytes(b"\x1bb");
+
+    assert!(
+        outcome.requests.is_empty(),
+        "passthrough covers the pane keys only"
+    );
+    assert!(state.sidebar_collapsed);
+}
+
 #[test]
 fn shell_targets_unconsumed_input_and_keeps_prefix_local() {
     let config = ClientShellConfig::from_config(&Config::default());

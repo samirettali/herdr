@@ -553,6 +553,10 @@ impl TerminalRuntime {
         self.0.foreground_cwd()
     }
 
+    pub fn foreground_process(&self) -> Option<String> {
+        self.0.foreground_process()
+    }
+
     pub fn child_pid(&self) -> Option<u32> {
         self.0.child_pid()
     }

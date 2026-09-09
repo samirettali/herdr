@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// Current protocol version. Bumped when wire format changes incompatibly.
-pub const PROTOCOL_VERSION: u32 = 22;
+pub const PROTOCOL_VERSION: u32 = 23;
 
 /// Maximum allowed frame payload size (2 MB). Frames larger than this are
 /// rejected to prevent denial-of-service via oversized length prefixes.
@@ -1053,6 +1053,8 @@ pub struct ClientShellPane {
     pub label: Option<String>,
     pub cwd: Option<String>,
     pub foreground_cwd: Option<String>,
+    /// Executable name of the foreground process group leader.
+    pub foreground_process: Option<String>,
     pub focused: bool,
     pub right_click_passthrough: bool,
 }
@@ -2674,6 +2676,7 @@ mod tests {
                 label: None,
                 cwd: Some("/repo".into()),
                 foreground_cwd: Some("/repo".into()),
+                foreground_process: None,
                 focused: true,
                 right_click_passthrough: false,
             }],

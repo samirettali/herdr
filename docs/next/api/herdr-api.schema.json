@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "protocol": 22,
+  "protocol": 23,
   "schema_version": 1,
   "schemas": {
     "error_response": {
@@ -794,6 +794,13 @@
               "type": "boolean"
             },
             "foreground_cwd": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "foreground_process": {
+              "description": "Executable name of the pane's foreground process group leader.",
               "type": [
                 "string",
                 "null"
@@ -7959,6 +7966,13 @@
               "type": "boolean"
             },
             "foreground_cwd": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "foreground_process": {
+              "description": "Executable name of the pane's foreground process group leader.",
               "type": [
                 "string",
                 "null"

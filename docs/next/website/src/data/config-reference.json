@@ -830,6 +830,12 @@
           "description": "Toggle sidebar collapse."
         },
         {
+          "key": "keys.passthrough_commands",
+          "type": "array",
+          "default": "[]",
+          "description": "Executable names that keep the direct focus_pane_* keys for themselves while one of them is the focused pane's foreground process. The chord is forwarded to the pane instead of moving focus."
+        },
+        {
           "key": "keys.indexed.tabs",
           "type": "string",
           "default": "unset",

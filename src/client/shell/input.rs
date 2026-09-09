@@ -556,6 +556,7 @@ impl ClientShellState {
             ClientShellMode::Terminal => {
                 if let Some(binding) =
                     crate::input::resolve_direct_binding(&self.config.keybinds.keybinds, key)
+                        .filter(|binding| !self.focus_pane_key_belongs_to_pane(binding))
                 {
                     self.record_binding(binding, outcome);
                     return None;
@@ -956,6 +957,39 @@ impl ClientShellState {
         self.snapshot
             .as_deref()
             .and_then(|snapshot| snapshot.focused_pane_id.clone())
+    }
+
+    /// Whether a directional pane key belongs to the program in the focused
+    /// pane rather than to Herdr, because the user listed its executable in
+    /// `keys.passthrough_commands`. This is what lets Neovim keep `ctrl+h` for
+    /// its own splits and call `herdr pane focus` only at its edge. The
+    /// foreground executable is a server fact carried by the pane snapshot.
+    fn focus_pane_key_belongs_to_pane(&self, binding: &crate::input::KeybindMatch) -> bool {
+        use crate::input::{KeybindAction, KeybindMatch};
+
+        let commands = &self.config.local_keys.passthrough_commands;
+        if commands.is_empty()
+            || !matches!(
+                binding,
+                KeybindMatch::Action(
+                    KeybindAction::FocusPaneLeft
+                        | KeybindAction::FocusPaneDown
+                        | KeybindAction::FocusPaneUp
+                        | KeybindAction::FocusPaneRight
+                )
+            )
+        {
+            return false;
+        }
+        let Some(snapshot) = self.snapshot.as_deref() else {
+            return false;
+        };
+        snapshot
+            .panes
+            .iter()
+            .find(|pane| Some(&pane.pane_id) == snapshot.focused_pane_id.as_ref())
+            .and_then(|pane| pane.foreground_process.as_deref())
+            .is_some_and(|executable| commands.iter().any(|listed| listed == executable))
     }
 
     pub(crate) fn clipboard_image_target(

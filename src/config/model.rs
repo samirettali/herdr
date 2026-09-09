@@ -455,6 +455,14 @@ pub struct KeysConfig {
     /// Prefix-mode custom command bindings.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub command: Vec<CommandKeybindConfig>,
+    /// Executable names that keep the directional pane keys for themselves, for
+    /// example ["nvim"]. While one of them is the focused pane's foreground
+    /// process, a prefix-less focus_pane_* chord is forwarded to the pane
+    /// instead of moving focus, so the program can navigate its own splits and
+    /// call `herdr pane focus` when it reaches its edge. Prefix bindings and
+    /// every other action are unaffected. Default: empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub passthrough_commands: Vec<String>,
     #[serde(skip_serializing)]
     pub(crate) user_fields: BTreeSet<&'static str>,
 }
@@ -584,6 +592,8 @@ pub(crate) struct KeysConfigOverlay {
     indexed: Option<IndexedKeysConfig>,
     #[serde(skip_serializing)]
     command: Option<Vec<CommandKeybindConfig>>,
+    #[serde(skip_serializing)]
+    passthrough_commands: Option<Vec<String>>,
 }
 
 impl KeysConfigOverlay {
@@ -670,6 +680,7 @@ impl<'de> Deserialize<'de> for KeysConfig {
         apply_field!(toggle_sidebar);
         apply_field!(indexed);
         apply_field!(command);
+        apply_field!(passthrough_commands);
 
         Ok(keys)
     }
@@ -1145,6 +1156,7 @@ impl Default for KeysConfig {
             toggle_sidebar: BindingConfig::one("prefix+b"),
             indexed: IndexedKeysConfig::default(),
             command: Vec::new(),
+            passthrough_commands: Vec::new(),
             user_fields: BTreeSet::new(),
         }
     }
@@ -1474,6 +1486,19 @@ status_indicators = "symbols"
             .unwrap_err()
             .to_string();
         assert!(wrong_type.contains("\"auto\", \"always\", \"off\", or a legacy boolean"));
+    }
+
+    #[test]
+    fn passthrough_commands_default_empty_and_parse() {
+        assert!(Config::default().keys.passthrough_commands.is_empty());
+        let config: Config = toml::from_str(
+            r#"
+[keys]
+passthrough_commands = ["nvim", "vim"]
+"#,
+        )
+        .unwrap();
+        assert_eq!(config.keys.passthrough_commands, ["nvim", "vim"]);
     }
 
     #[test]
