@@ -357,6 +357,21 @@ mod tests {
     }
 
     #[test]
+    fn git_status_stays_tight_on_either_side_of_the_branch() {
+        let arrows = ResolvedToken::unstyled(ResolvedTokenKind::GitStatus {
+            ahead: 1,
+            behind: 2,
+        });
+        let branch = ResolvedToken::unstyled(ResolvedTokenKind::Branch("main".into()));
+
+        assert_eq!(
+            row_text(&[branch.clone(), arrows.clone()], 40),
+            "main ↑1 ↓2"
+        );
+        assert_eq!(row_text(&[arrows, branch], 40), "↑1 ↓2 main");
+    }
+
+    #[test]
     fn spacer_collapses_when_the_row_is_already_full() {
         let resolved = vec![
             ResolvedToken::unstyled(ResolvedTokenKind::Workspace("workspace".into())),
