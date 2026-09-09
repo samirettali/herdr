@@ -393,6 +393,7 @@ pub(super) fn render_expanded(
                     rect,
                     marker,
                     endpoint,
+                    config.machines.display_label(&endpoint.label),
                     collapsed && &endpoint.endpoint_id == state.active_endpoint_id,
                     palette,
                 );
@@ -499,7 +500,10 @@ pub(super) fn render_expanded(
 
     let footer_y = workspace_area.bottom().saturating_sub(1);
     if config.mouse_capture {
-        let label = format!(" new · {}", active_endpoint_label(state));
+        let label = format!(
+            " new · {}",
+            config.machines.display_label(active_endpoint_label(state))
+        );
         hits.new_workspace = Rect::new(
             workspace_area.x,
             footer_y,
@@ -573,6 +577,7 @@ fn render_endpoint_row(
     rect: Rect,
     marker: &str,
     endpoint: &ClientShellEndpoint,
+    label: &str,
     highlighted: bool,
     palette: &Palette,
 ) {
@@ -598,7 +603,7 @@ fn render_endpoint_row(
         rect.x,
         rect.y,
         rect.width.saturating_sub(signal_width.saturating_add(1)),
-        &format!(" {marker} {}", endpoint.label),
+        &format!(" {marker} {label}"),
         Style::default()
             .fg(
                 if matches!(endpoint.status, ClientEndpointStatus::Disabled) {

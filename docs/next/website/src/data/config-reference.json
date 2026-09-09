@@ -1187,6 +1187,12 @@
           "description": "Complete Agent-row overrides keyed by strict canonical agent id. Agents without an override use ui.sidebar.agents.rows."
         },
         {
+          "key": "ui.sidebar.machines.labels",
+          "type": "table",
+          "default": "{}",
+          "description": "Sidebar label per saved machine name, for example a Nerd Font glyph. The local machine is local; names match ignoring ASCII case. The CLI and messages keep the saved name."
+        },
+        {
           "key": "ui.sidebar.spaces.row_gap",
           "type": "integer",
           "default": "0",
