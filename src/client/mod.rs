@@ -17,6 +17,7 @@ mod catalog_reload;
 mod clipboard_forwarding;
 mod clipboard_images;
 mod config_reload;
+mod detach_effect;
 #[cfg(unix)]
 mod direct_graphics;
 pub(crate) mod endpoint;

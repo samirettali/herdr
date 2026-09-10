@@ -62,6 +62,26 @@ name keeps the saved one. The machines panel and the mobile switcher show icon a
 blank rather than the dot separator, the way `state_icon` is. The CLI, `herdr machine list` and
 status messages keep the saved name.
 
+### A detach effect
+
+Detaching drops you back to the shell prompt in one frame. Optionally the client plays an
+animation over its last frame first:
+
+```toml
+[ui]
+detach_effect = "matrix"   # none (default) | matrix
+detach_effect_ms = 800     # default 500
+```
+
+`matrix` grows film-style digital rain out of the characters on screen: every character becomes
+the head of a stream of varying speed and tail length, the code it drags behind it stands still
+and only occasionally mutates, and painted surfaces nothing falls over fade to black on their
+own.
+
+Frames are generated from the frame already on screen and written through the same path as any
+other frame, at 120 a second with late frames dropped rather than stretching the duration, so the
+server never knows the effect exists and the effect always ends on time, on a black screen.
+
 ### Collapsing a machine hides its agents
 
 Collapsing a machine folds its spaces but upstream keeps its agents in the agents panel. With

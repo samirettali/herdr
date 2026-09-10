@@ -1114,6 +1114,22 @@
           "description": "Hide the tab row when the workspace has one tab."
         },
         {
+          "key": "ui.detach_effect",
+          "type": "enum",
+          "default": "\"none\"",
+          "description": "Animation played over the last frame when the client detaches. matrix grows film-style digital rain out of the characters on screen.",
+          "values": [
+            "none",
+            "matrix"
+          ]
+        },
+        {
+          "key": "ui.detach_effect_ms",
+          "type": "integer",
+          "default": "500",
+          "description": "How long the detach effect runs, in milliseconds."
+        },
+        {
           "key": "ui.tab_bar_position",
           "type": "enum",
           "default": "\"top\"",

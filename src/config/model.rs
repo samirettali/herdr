@@ -134,6 +134,18 @@ pub enum HostCursorModeConfig {
     Drawn,
 }
 
+/// What the client draws over the last frame while detaching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DetachEffectConfig {
+    #[default]
+    None,
+    /// Film-style digital rain grown out of the text on screen: characters
+    /// become the heads of streams of varying speed that light up and wipe
+    /// the standing code below them.
+    Matrix,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SidebarCollapsedModeConfig {
@@ -960,6 +972,11 @@ pub struct UiConfig {
     pub show_agent_labels_on_pane_borders: bool,
     /// Hide the tab row when the workspace has one tab. Default: false.
     pub hide_tab_bar_when_single_tab: bool,
+    /// Animation played over the last frame when the client detaches.
+    /// Default: none.
+    pub detach_effect: DetachEffectConfig,
+    /// How long the detach effect runs, in milliseconds. Default: 500.
+    pub detach_effect_ms: u64,
     /// Desktop tab row placement. Default: top.
     pub tab_bar_position: TabBarPositionConfig,
     /// Ordered entries shown at the right edge of the desktop tab row. Empty by default.
@@ -1195,6 +1212,8 @@ impl Default for UiConfig {
             pane_gaps: true,
             show_agent_labels_on_pane_borders: false,
             hide_tab_bar_when_single_tab: false,
+            detach_effect: DetachEffectConfig::None,
+            detach_effect_ms: 500,
             tab_bar_position: TabBarPositionConfig::Top,
             tab_bar_right: Vec::new(),
             tab_bar_right_separator: " ".into(),
