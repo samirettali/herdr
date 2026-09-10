@@ -328,8 +328,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # New tabs can still be created with the configured keybinding.
 # hide_tab_bar_when_single_tab = false
 
-# Animation played over the last frame when the client detaches: "none" or "matrix", which
-# grows film-style digital rain out of the characters on screen.
+# Animation played over the last frame when the client detaches. "matrix" grows film-style
+# digital rain out of the characters on screen; "blackhole" spirals them into a black hole at
+# the centre, heating through the accretion disk and redshifting at the horizon.
 # detach_effect = "none"
 # How long it runs, in milliseconds.
 # detach_effect_ms = 500

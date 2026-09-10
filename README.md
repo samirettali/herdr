@@ -69,14 +69,24 @@ animation over its last frame first:
 
 ```toml
 [ui]
-detach_effect = "matrix"   # none (default) | matrix
+detach_effect = "matrix"   # none (default) | matrix | blackhole
 detach_effect_ms = 800     # default 500
 ```
 
 `matrix` grows film-style digital rain out of the characters on screen: every character becomes
-the head of a stream of varying speed and tail length, the code it drags behind it stands still
-and only occasionally mutates, and painted surfaces nothing falls over fade to black on their
-own.
+the head of a stream of varying speed and tail length, white and flickering, with the rows
+behind it fading from white into green; the code it drags behind stands still and only
+occasionally mutates, the streams stall and surge rather than slide, and painted surfaces
+nothing falls over fade to black on their own.
+
+`blackhole` sends every character into a decaying orbit around the centre of the screen, in an
+accretion disk seen almost edge-on and askew: radii shrink on a power curve while angles advance
+at the Keplerian rate, so the disk spins up as it falls in, and the whole scene turns around the
+centre on top of that. The far half of the disk is lensed up over the shadow into an arch with a
+faint second image under it, the approaching side is Doppler-beamed brighter and the receding
+side dimmer and redder, particles heat through the disk and redshift just above the horizon,
+and the shadow grows as it feeds, ringed by a hot photon ring. Two seconds suit it better than
+one.
 
 Frames are generated from the frame already on screen and written through the same path as any
 other frame, at 120 a second with late frames dropped rather than stretching the duration, so the

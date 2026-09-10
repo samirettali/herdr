@@ -1117,10 +1117,11 @@
           "key": "ui.detach_effect",
           "type": "enum",
           "default": "\"none\"",
-          "description": "Animation played over the last frame when the client detaches. matrix grows film-style digital rain out of the characters on screen.",
+          "description": "Animation played over the last frame when the client detaches. matrix grows film-style digital rain out of the characters on screen; blackhole spirals them into a black hole at the centre, heating through the accretion disk and redshifting at the horizon.",
           "values": [
             "none",
-            "matrix"
+            "matrix",
+            "blackhole"
           ]
         },
         {
