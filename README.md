@@ -47,17 +47,20 @@ tight after the branch. So `["git_status", "branch"]` reads `↑1 main` rather t
 ### Machine labels
 
 Saved machines show under the name `herdr machine add` recorded, and the local one is always
-`Local`. A mapping renames them in the sidebar only, for example to one Nerd Font glyph each so
-the rows line up:
+`Local`. A mapping gives each an icon, typically one Nerd Font glyph so the rows line up, and a
+display name, in the sidebar only:
 
 ```toml
 [ui.sidebar.machines]
-labels = { local = "", andromeda = "", work = "" }
+labels = { local = { icon = "", name = "mbp" }, andromeda = { icon = "" }, work = { icon = "" } }
+agent_token = "icon"   # what the machine token of the agent rows shows: icon, name or both
 ```
 
-Keys are the saved names and match ignoring case. The label also feeds the `machine` token of
-the agent rows and the mobile switcher; the CLI, `herdr machine list` and status messages keep
-the saved name.
+Keys are the saved names and match ignoring case; either field may be left out, and a missing
+name keeps the saved one. The machines panel and the mobile switcher show icon and name. The
+`machine` token of the agent rows follows `agent_token`, and as a bare icon it is followed by a
+blank rather than the dot separator, the way `state_icon` is. The CLI, `herdr machine list` and
+status messages keep the saved name.
 
 ### Collapsing a machine hides its agents
 
