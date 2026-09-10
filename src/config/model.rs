@@ -144,6 +144,10 @@ pub enum DetachEffectConfig {
     /// become the heads of streams of varying speed that light up and wipe
     /// the standing code below them.
     Matrix,
+    /// The characters spiral into a black hole at the centre of the screen,
+    /// heating through the accretion disk and redshifting at the horizon.
+    #[serde(rename = "blackhole")]
+    BlackHole,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
