@@ -489,20 +489,91 @@ impl Default for SpacesSidebarConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct MachinesSidebarConfig {
-    /// Sidebar label per saved machine name, for example a Nerd Font glyph.
-    /// The local machine is `local`. Names match ignoring ASCII case.
-    pub labels: BTreeMap<String, String>,
+    /// Sidebar label per saved machine name. The local machine is `local`.
+    /// Names match ignoring ASCII case.
+    pub labels: BTreeMap<String, MachineLabelConfig>,
+    /// What the `machine` token of the agent rows shows. Default: name.
+    pub agent_token: MachineTokenConfig,
     /// Drop the agents of a collapsed machine from the agents panel and from
     /// agent navigation, so collapsing a machine hides it whole. Default: false.
     pub hide_agents_when_collapsed: bool,
 }
 
+/// One machine's sidebar label: an icon, typically a Nerd Font glyph so the
+/// rows line up, and a display name that replaces the saved one.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct MachineLabelConfig {
+    pub icon: Option<String>,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MachineTokenConfig {
+    Icon,
+    #[default]
+    Name,
+    Both,
+}
+
+/// The `machine` token of an agent row, resolved for one machine.
+pub struct MachineToken {
+    pub text: String,
+    /// The text is a bare icon, so it is separated from the next token by a
+    /// blank rather than a dot, the way `state_icon` is.
+    pub icon_only: bool,
+}
+
 impl MachinesSidebarConfig {
-    pub(crate) fn display_label<'a>(&'a self, name: &'a str) -> &'a str {
+    fn label(&self, name: &str) -> Option<&MachineLabelConfig> {
         self.labels
             .iter()
             .find(|(key, _)| key.eq_ignore_ascii_case(name))
-            .map_or(name, |(_, label)| label.as_str())
+            .map(|(_, label)| label)
+    }
+
+    /// The machines panel label: icon and name, whichever are set.
+    pub(crate) fn display_label(&self, name: &str) -> String {
+        let Some(label) = self.label(name) else {
+            return name.to_string();
+        };
+        let name = label.name.as_deref().unwrap_or(name);
+        match label.icon.as_deref() {
+            Some(icon) => format!("{icon} {name}"),
+            None => name.to_string(),
+        }
+    }
+
+    /// The icon alone, for the collapsed sidebar that only has room for one
+    /// cell per machine. Falls back to the display name.
+    pub(crate) fn display_icon(&self, name: &str) -> String {
+        self.label(name)
+            .and_then(|label| label.icon.clone())
+            .unwrap_or_else(|| self.display_label(name))
+    }
+
+    /// The `machine` token of the agent rows, per `agent_token`.
+    pub(crate) fn agent_token(&self, name: &str) -> MachineToken {
+        let label = self.label(name);
+        let icon = label.and_then(|label| label.icon.as_deref());
+        let display_name = label
+            .and_then(|label| label.name.as_deref())
+            .unwrap_or(name);
+        match (self.agent_token, icon) {
+            (MachineTokenConfig::Icon, Some(icon)) => MachineToken {
+                text: icon.to_string(),
+                icon_only: true,
+            },
+            (MachineTokenConfig::Both, Some(icon)) => MachineToken {
+                text: format!("{icon} {display_name}"),
+                icon_only: false,
+            },
+            _ => MachineToken {
+                text: display_name.to_string(),
+                icon_only: false,
+            },
+        }
     }
 }
 
@@ -698,15 +769,59 @@ rows = [[{ token = "$status", rules = [{ contains = "error", bold = true }] }]]
         let config: crate::config::Config = toml::from_str(
             r#"
 [ui.sidebar.machines]
-labels = { local = "L", andromeda = "A" }
+labels = { local = { icon = "L", name = "mbp" }, andromeda = { icon = "A" }, work = { name = "office" } }
 "#,
         )
         .expect("machine labels");
         let machines = &config.ui.sidebar.machines;
 
-        assert_eq!(machines.display_label("Local"), "L");
-        assert_eq!(machines.display_label("andromeda"), "A");
-        assert_eq!(machines.display_label("work"), "work");
+        assert_eq!(machines.display_label("Local"), "L mbp");
+        assert_eq!(machines.display_label("andromeda"), "A andromeda");
+        assert_eq!(machines.display_label("work"), "office");
+        assert_eq!(machines.display_label("other"), "other");
+        assert_eq!(machines.display_icon("Local"), "L");
+        assert_eq!(machines.display_icon("work"), "office");
+        assert_eq!(machines.agent_token("Local").text, "mbp");
+        assert!(!machines.agent_token("Local").icon_only);
+    }
+
+    #[test]
+    fn machine_agent_token_follows_the_configured_shape() {
+        let mut config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.machines]
+agent_token = "icon"
+labels = { local = { icon = "L", name = "mbp" }, work = { name = "office" } }
+"#,
+        )
+        .expect("machine labels");
+        let machines = &config.ui.sidebar.machines;
+        let token = machines.agent_token("Local");
+        assert_eq!(token.text, "L");
+        assert!(token.icon_only);
+        let token = machines.agent_token("work");
+        assert_eq!(token.text, "office", "no icon falls back to the name");
+        assert!(!token.icon_only);
+
+        config.ui.sidebar.machines.agent_token = MachineTokenConfig::Both;
+        let token = config.ui.sidebar.machines.agent_token("Local");
+        assert_eq!(token.text, "L mbp");
+        assert!(!token.icon_only);
+    }
+
+    #[test]
+    fn machine_labels_default_to_the_saved_names() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.machines]
+hide_agents_when_collapsed = true
+"#,
+        )
+        .expect("machine config");
+        let machines = &config.ui.sidebar.machines;
+        assert_eq!(machines.display_label("Local"), "Local");
+        assert_eq!(machines.agent_token("Local").text, "Local");
+        assert!(machines.hide_agents_when_collapsed);
         assert_eq!(
             SidebarConfig::default().machines.display_label("Local"),
             "Local"
