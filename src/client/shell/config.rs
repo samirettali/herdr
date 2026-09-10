@@ -16,6 +16,14 @@ pub(super) fn merged_config_diagnostic(
 }
 
 impl ClientShellState {
+    /// The configured detach effect and its duration.
+    pub(crate) fn detach_effect(&self) -> (crate::config::DetachEffectConfig, std::time::Duration) {
+        (
+            self.config.detach_effect,
+            std::time::Duration::from_millis(self.config.detach_effect_ms),
+        )
+    }
+
     pub(super) fn set_local_config_diagnostic(&mut self, diagnostic: Option<String>) {
         self.local_config_diagnostic = diagnostic;
         self.config_diagnostic = merged_config_diagnostic(
@@ -121,6 +129,8 @@ impl ClientShellConfig {
             mobile_width_threshold: config.ui.mobile_width_threshold,
             tab_bar_position: config.ui.tab_bar_position,
             hide_tab_bar_when_single_tab: config.ui.hide_tab_bar_when_single_tab,
+            detach_effect: config.ui.detach_effect,
+            detach_effect_ms: config.ui.detach_effect_ms,
             spaces: config.ui.sidebar.spaces.clone(),
             agents: config.ui.sidebar.agents.clone(),
             machines: config.ui.sidebar.machines.clone(),
@@ -325,6 +335,8 @@ impl ClientShellConfig {
                 self.mobile_width_threshold = ui.mobile_width_threshold;
                 self.tab_bar_position = ui.tab_bar_position;
                 self.hide_tab_bar_when_single_tab = ui.hide_tab_bar_when_single_tab;
+                self.detach_effect = ui.detach_effect;
+                self.detach_effect_ms = ui.detach_effect_ms;
                 self.spaces = ui.sidebar.spaces.clone();
                 self.agents = ui.sidebar.agents.clone();
                 self.machines = ui.sidebar.machines.clone();

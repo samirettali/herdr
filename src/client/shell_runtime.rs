@@ -623,6 +623,11 @@ pub(super) fn finish_client_shell_input(
 ) -> Result<bool, ClientError> {
     apply_client_shell_input_source_changes(state, prefix_input_source);
     if outcome.detach {
+        // The effect is drawn from the frame on screen and blocks for its
+        // duration, so it runs before the server hears about the detach.
+        if let Some((effect, duration)) = state.shell.as_ref().map(|shell| shell.detach_effect()) {
+            super::detach_effect::play(state, effect, duration);
+        }
         let _ = write_to_server(endpoints, &ClientMessage::Detach);
         return Ok(true);
     }

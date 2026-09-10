@@ -328,6 +328,12 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # New tabs can still be created with the configured keybinding.
 # hide_tab_bar_when_single_tab = false
 
+# Animation played over the last frame when the client detaches: "none" or "matrix", which
+# grows film-style digital rain out of the characters on screen.
+# detach_effect = "none"
+# How long it runs, in milliseconds.
+# detach_effect_ms = 500
+
 # Desktop tab row placement: "top" or "bottom".
 # tab_bar_position = "top"
 
