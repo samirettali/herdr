@@ -367,10 +367,14 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # [ui.sidebar.agents.rows_by_agent]
 # claude = [["state_icon", "machine", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
 
-# Sidebar labels per saved machine name, for example Nerd Font glyphs so the rows line up.
-# The local machine is "local"; names match ignoring case. CLI and messages keep the saved name.
+# Sidebar labels per saved machine name: an icon, for example a Nerd Font glyph so the rows
+# line up, and a display name. The machines panel shows both; the local machine is "local"
+# and names match ignoring case. CLI and messages keep the saved name.
 # [ui.sidebar.machines]
-# labels = { local = "L", andromeda = "A" }
+# labels = { local = { icon = "L", name = "laptop" }, andromeda = { icon = "A" } }
+# What the machine token of the agent rows shows: "name", "icon" or "both". A bare icon is
+# followed by a blank rather than the dot separator.
+# agent_token = "name"
 # Collapsing a machine also drops its agents from the agents panel and from agent navigation.
 # hide_agents_when_collapsed = false
 

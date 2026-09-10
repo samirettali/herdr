@@ -1534,7 +1534,7 @@ fn machine_labels_replace_saved_names_in_the_sidebar_only() {
     let config = toml::from_str::<Config>(
         r#"
 [ui.sidebar.machines]
-labels = { local = "L", build = "B" }
+labels = { local = { icon = "L", name = "laptop" }, build = { icon = "B" } }
 "#,
     )
     .expect("machine labels");
@@ -1560,10 +1560,9 @@ labels = { local = "L", build = "B" }
         })
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(text.contains("▾ L "), "frame: {text:?}");
-    assert!(text.contains("▾ B "), "frame: {text:?}");
+    assert!(text.contains("▾ L laptop"), "frame: {text:?}");
+    assert!(text.contains("▾ B Build"), "frame: {text:?}");
     assert!(!text.contains("Local"), "frame: {text:?}");
-    assert!(!text.contains("Build"), "frame: {text:?}");
     assert_eq!(state.endpoint_label(&endpoint_id), "Build");
 }
 

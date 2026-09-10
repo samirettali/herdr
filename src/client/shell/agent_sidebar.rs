@@ -237,7 +237,7 @@ pub(super) fn render_agent_list<T>(
 pub(super) fn agent_rows(
     snapshot: &ClientShellSnapshot,
     config: &ClientShellConfig,
-    machine: Option<&str>,
+    machine: Option<&crate::config::MachineToken>,
 ) -> Vec<AgentRow> {
     ordered_agent_pane_ids(snapshot, config.agent_panel_sort)
         .into_iter()
@@ -286,7 +286,8 @@ pub(super) fn agent_rows(
             let rows = crate::ui::sidebar_agent_rows(
                 &config.agents,
                 crate::ui::AgentTokenContext {
-                    machine,
+                    machine: machine.map(|machine| machine.text.as_str()),
+                    machine_icon: machine.is_some_and(|machine| machine.icon_only),
                     workspace: &workspace.label,
                     tab: tab_label,
                     pane: agent

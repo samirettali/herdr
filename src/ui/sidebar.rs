@@ -117,6 +117,7 @@ pub(crate) fn resolved_token_spans(
         .iter()
         .map(|token| match &token.kind {
             ResolvedTokenKind::StateIcon => display_width(state_icon.0),
+            ResolvedTokenKind::MachineIcon(icon) => display_width(icon),
             ResolvedTokenKind::GitStatus { ahead, behind } => {
                 usize::from(*ahead > 0) * display_width(&format!("↑{ahead}"))
                     + usize::from(*behind > 0) * display_width(&format!("↓{behind}"))
@@ -280,6 +281,10 @@ pub(crate) fn resolved_token_spans(
                     ));
                 }
             }
+            ResolvedTokenKind::MachineIcon(icon) => spans.push(Span::styled(
+                icon.clone(),
+                apply_token_style(secondary_style, token.style),
+            )),
             ResolvedTokenKind::Spacer => {
                 spans.push(Span::raw(" ".repeat(budgets[index])));
             }
@@ -369,6 +374,16 @@ mod tests {
             "main ↑1 ↓2"
         );
         assert_eq!(row_text(&[arrows, branch], 40), "↑1 ↓2 main");
+    }
+
+    #[test]
+    fn machine_icon_is_blank_separated_where_a_name_gets_a_dot() {
+        let workspace = ResolvedToken::unstyled(ResolvedTokenKind::Workspace("one".into()));
+        let name = ResolvedToken::unstyled(ResolvedTokenKind::Machine("mbp".into()));
+        let icon = ResolvedToken::unstyled(ResolvedTokenKind::MachineIcon("L".into()));
+
+        assert_eq!(row_text(&[name, workspace.clone()], 40), "mbp · one");
+        assert_eq!(row_text(&[icon, workspace], 40), "L one");
     }
 
     #[test]

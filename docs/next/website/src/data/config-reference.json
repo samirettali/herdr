@@ -1190,7 +1190,18 @@
           "key": "ui.sidebar.machines.labels",
           "type": "table",
           "default": "{}",
-          "description": "Sidebar label per saved machine name, for example a Nerd Font glyph. The local machine is local; names match ignoring ASCII case. The CLI and messages keep the saved name."
+          "description": "Sidebar label per saved machine name, as { icon, name } tables. The machines panel shows the icon and the name; the local machine is local and names match ignoring ASCII case. The CLI and messages keep the saved name."
+        },
+        {
+          "key": "ui.sidebar.machines.agent_token",
+          "type": "enum",
+          "default": "\"name\"",
+          "description": "What the machine token of the agent rows shows. A bare icon is followed by a blank rather than the dot separator.",
+          "values": [
+            "icon",
+            "name",
+            "both"
+          ]
         },
         {
           "key": "ui.sidebar.machines.hide_agents_when_collapsed",

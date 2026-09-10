@@ -371,7 +371,7 @@ pub(super) fn render_expanded(
                     rect,
                     marker,
                     endpoint,
-                    config.machines.display_label(&endpoint.label),
+                    &config.machines.display_label(&endpoint.label),
                     collapsed && &endpoint.endpoint_id == state.active_endpoint_id,
                     palette,
                 );
