@@ -55,6 +55,18 @@ and its icon is the dim `·` of an unknown state. The focused tab gets the activ
 background, clicking a tab focuses it, on another machine too, and the agent keys still walk
 the agents in order. The collapsed sidebar and the mobile switcher are untouched.
 
+With the tree open the tab bar repeats what the sidebar shows, so it can go:
+
+```toml
+[ui]
+hide_tab_bar_with_tree_sidebar = true
+```
+
+It hides the tab row only while the expanded sidebar is in the `tree` layout and brings it
+back the moment the sidebar is collapsed, so a hidden sidebar never leaves you without a tab
+indicator. What goes with the row is what only the row offered: the `+` for a new tab by mouse,
+dragging tabs to reorder them and the `tab_bar_right` segments. The keys are unaffected.
+
 ### A `spacer` sidebar token
 
 Sidebar rows are already token lists. A `spacer` eats whatever width the other tokens of its
