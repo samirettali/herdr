@@ -116,6 +116,7 @@ pub(super) fn render_tab_row(
     last: bool,
     endpoint_active: bool,
     selected: bool,
+    indent: u16,
     config: &ClientShellConfig,
 ) {
     let palette = &config.palette;
@@ -168,11 +169,14 @@ pub(super) fn render_tab_row(
             (true, false, true) => "└─ ",
             (true, false, false) => "├─ ",
         };
-        let prefix = format!("{trunk}{branch}");
+        // `indent` is where the workspace rows start inside `area`; the
+        // trunk then sets the tab two columns in from the workspace label.
+        let prefix = format!("{}{trunk}{branch}", " ".repeat(usize::from(indent)));
         let prefix_width = super::render::display_width(&prefix);
         let mut spans = vec![Span::styled(prefix, Style::default().fg(palette.overlay0))];
         // The tab is the subject of the row, so it takes the name style that
-        // the workspace has in the agent rows.
+        // the workspace has in the agent rows. The spacer keeps one column
+        // of margin on the right, mirroring the one on the left.
         spans.extend(crate::ui::resolved_token_spans(
             tokens,
             icon,
@@ -181,7 +185,7 @@ pub(super) fn render_tab_row(
             name_style,
             Style::default().fg(palette.overlay1),
             palette,
-            area.width.saturating_sub(prefix_width + 1) as usize,
+            area.width.saturating_sub(prefix_width) as usize,
         ));
         Paragraph::new(Line::from(spans)).render(Rect::new(area.x, y, area.width, 1), buffer);
     }

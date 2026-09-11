@@ -349,6 +349,7 @@ pub(crate) fn render_sidebar(
                     state.selected_tab.is_some_and(|target| {
                         target.matches(&ClientEndpointId::Local, &row.tab_id)
                     }),
+                    0,
                     config,
                 );
                 hits.sidebar_tabs
