@@ -52,8 +52,22 @@ Tab rows take the agent row vocabulary, `rows_by_agent` included, so a tab that 
 renders exactly like its agents-panel row would. A plain tab only has `state_icon`,
 `state_text`, `machine`, `workspace`, `tab` and `spacer`; the agent tokens drop out of its row
 and its icon is the dim `·` of an unknown state. The focused tab gets the active row
-background, clicking a tab focuses it, on another machine too, and the agent keys still walk
-the agents in order. The collapsed sidebar and the mobile switcher are untouched.
+background and the workspace row does not repeat it, since the tab already says which
+workspace is current. Clicking a tab focuses it, on another machine too, and the agent keys
+still walk the agents in order. The collapsed sidebar and the mobile switcher are untouched.
+
+The branch glyphs are optional. `guides = "indent"` under `[ui.sidebar.tabs]` drops them and
+sets each tab two columns in from its workspace label:
+
+```
+ machines
+  ▾ 󰇄 mbp
+    dotfiles                      main
+      ● claude · Claude Code
+      · shell
+    sottocasa                     feat/booking
+      ○ codex
+```
 
 With the tree open the tab bar repeats what the sidebar shows, so it can go:
 
