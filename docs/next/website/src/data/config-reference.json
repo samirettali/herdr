@@ -1202,6 +1202,18 @@
           ]
         },
         {
+          "key": "ui.sidebar.new_button",
+          "type": "boolean",
+          "default": "true",
+          "description": "Show the new button in the sidebar footer."
+        },
+        {
+          "key": "ui.sidebar.menu_button",
+          "type": "boolean",
+          "default": "true",
+          "description": "Show the menu launcher in the sidebar footer. The global menu opens only from there, so with it off the menu and its update badge are gone; its entries stay reachable through their own keybindings."
+        },
+        {
           "key": "ui.sidebar.tabs.rows",
           "type": "list of token rows",
           "default": "[[\"state_icon\", \"tab\"]]",

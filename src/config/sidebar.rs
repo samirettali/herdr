@@ -633,14 +633,32 @@ impl Default for TabsSidebarConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SidebarConfig {
     pub layout: SidebarLayoutConfig,
+    /// Show the `new` button in the sidebar footer. Default: true.
+    pub new_button: bool,
+    /// Show the `menu` launcher in the sidebar footer. Default: true.
+    pub menu_button: bool,
     pub agents: AgentsSidebarConfig,
     pub spaces: SpacesSidebarConfig,
     pub tabs: TabsSidebarConfig,
     pub machines: MachinesSidebarConfig,
+}
+
+impl Default for SidebarConfig {
+    fn default() -> Self {
+        Self {
+            layout: SidebarLayoutConfig::default(),
+            new_button: true,
+            menu_button: true,
+            agents: AgentsSidebarConfig::default(),
+            spaces: SpacesSidebarConfig::default(),
+            tabs: TabsSidebarConfig::default(),
+            machines: MachinesSidebarConfig::default(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -679,6 +697,8 @@ mod tests {
         );
         assert!(config.tabs.rows_by_agent.is_empty());
         assert_eq!(config.tabs.guides, TabGuidesConfig::Lines);
+        assert!(config.new_button);
+        assert!(config.menu_button);
     }
 
     #[test]
@@ -687,6 +707,8 @@ mod tests {
             r#"
 [ui.sidebar]
 layout = "tree"
+new_button = false
+menu_button = false
 
 [ui.sidebar.tabs]
 rows = [["state_icon", "tab", "spacer", "agent"]]
@@ -699,6 +721,8 @@ codex = [["tab"]]
         .expect("tree layout config");
         assert_eq!(config.ui.sidebar.layout, SidebarLayoutConfig::Tree);
         assert_eq!(config.ui.sidebar.tabs.guides, TabGuidesConfig::Indent);
+        assert!(!config.ui.sidebar.new_button);
+        assert!(!config.ui.sidebar.menu_button);
         assert_eq!(
             config.ui.sidebar.tabs.rows,
             vec![vec![

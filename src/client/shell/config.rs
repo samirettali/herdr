@@ -133,6 +133,8 @@ impl ClientShellConfig {
             detach_effect: config.ui.detach_effect,
             detach_effect_ms: config.ui.detach_effect_ms,
             sidebar_layout: config.ui.sidebar.layout,
+            sidebar_new_button: config.ui.sidebar.new_button,
+            sidebar_menu_button: config.ui.sidebar.menu_button,
             spaces: config.ui.sidebar.spaces.clone(),
             agents: config.ui.sidebar.agents.clone(),
             tabs: config.ui.sidebar.tabs.clone(),
@@ -342,6 +344,8 @@ impl ClientShellConfig {
                 self.detach_effect = ui.detach_effect;
                 self.detach_effect_ms = ui.detach_effect_ms;
                 self.sidebar_layout = ui.sidebar.layout;
+                self.sidebar_new_button = ui.sidebar.new_button;
+                self.sidebar_menu_button = ui.sidebar.menu_button;
                 self.spaces = ui.sidebar.spaces.clone();
                 self.agents = ui.sidebar.agents.clone();
                 self.tabs = ui.sidebar.tabs.clone();
