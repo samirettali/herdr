@@ -1796,3 +1796,27 @@ fn tree_layout_works_with_the_local_machine_alone() {
     assert!(text.contains(" agents"), "panels are back: {text}");
     assert!(state.hits.sidebar_tabs.is_empty());
 }
+
+#[test]
+fn tree_layout_can_take_the_tab_bar_with_it_while_the_sidebar_is_open() {
+    let mut config = tree_layout_config();
+    config.ui.hide_tab_bar_with_tree_sidebar = true;
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    state.set_snapshot(Box::new(snapshot()));
+    state.set_pane_surface(surface());
+
+    assert_eq!(state.layout(100, 28).tab_bar.height, 0, "tree sidebar open");
+    frame_text(&mut state);
+    assert!(state.hits.tabs.is_empty(), "no tab bar hits");
+
+    state.sidebar_collapsed = true;
+    assert_eq!(state.layout(100, 28).tab_bar.height, 1, "sidebar collapsed");
+
+    state.sidebar_collapsed = false;
+    state.config.sidebar_layout = crate::config::SidebarLayoutConfig::Panels;
+    assert_eq!(state.layout(100, 28).tab_bar.height, 1, "panels layout");
+
+    state.config.sidebar_layout = crate::config::SidebarLayoutConfig::Tree;
+    state.config.hide_tab_bar_with_tree_sidebar = false;
+    assert_eq!(state.layout(100, 28).tab_bar.height, 1, "option off");
+}

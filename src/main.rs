@@ -328,6 +328,10 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # New tabs can still be created with the configured keybinding.
 # hide_tab_bar_when_single_tab = false
 
+# Hide the tab row while the expanded sidebar uses the "tree" layout, which already lists
+# every tab. It comes back when the sidebar is collapsed.
+# hide_tab_bar_with_tree_sidebar = false
+
 # Animation played over the last frame when the client detaches. "matrix" grows film-style
 # digital rain out of the characters on screen; "blackhole" spirals them into a black hole at
 # the centre, heating through the accretion disk and redshifting at the horizon.

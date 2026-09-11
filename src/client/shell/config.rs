@@ -129,6 +129,7 @@ impl ClientShellConfig {
             mobile_width_threshold: config.ui.mobile_width_threshold,
             tab_bar_position: config.ui.tab_bar_position,
             hide_tab_bar_when_single_tab: config.ui.hide_tab_bar_when_single_tab,
+            hide_tab_bar_with_tree_sidebar: config.ui.hide_tab_bar_with_tree_sidebar,
             detach_effect: config.ui.detach_effect,
             detach_effect_ms: config.ui.detach_effect_ms,
             sidebar_layout: config.ui.sidebar.layout,
@@ -337,6 +338,7 @@ impl ClientShellConfig {
                 self.mobile_width_threshold = ui.mobile_width_threshold;
                 self.tab_bar_position = ui.tab_bar_position;
                 self.hide_tab_bar_when_single_tab = ui.hide_tab_bar_when_single_tab;
+                self.hide_tab_bar_with_tree_sidebar = ui.hide_tab_bar_with_tree_sidebar;
                 self.detach_effect = ui.detach_effect;
                 self.detach_effect_ms = ui.detach_effect_ms;
                 self.sidebar_layout = ui.sidebar.layout;
@@ -410,7 +412,12 @@ impl ClientShellConfig {
         }
         .min(cols.saturating_sub(1));
         let main = Rect::new(sidebar_width, 0, cols.saturating_sub(sidebar_width), rows);
-        let show_tab_bar = rows > 1 && !(self.hide_tab_bar_when_single_tab && tab_count == 1);
+        let tree_sidebar_shown = sidebar_width > 0
+            && !sidebar_collapsed
+            && self.sidebar_layout == crate::config::SidebarLayoutConfig::Tree;
+        let show_tab_bar = rows > 1
+            && !(self.hide_tab_bar_when_single_tab && tab_count == 1)
+            && !(self.hide_tab_bar_with_tree_sidebar && tree_sidebar_shown);
         let tab_height = u16::from(show_tab_bar);
         let (tab_bar, pane_surface) = match self.tab_bar_position {
             TabBarPositionConfig::Top => (
