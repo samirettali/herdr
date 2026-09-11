@@ -976,6 +976,10 @@ pub struct UiConfig {
     pub show_agent_labels_on_pane_borders: bool,
     /// Hide the tab row when the workspace has one tab. Default: false.
     pub hide_tab_bar_when_single_tab: bool,
+    /// Hide the tab row while the expanded sidebar uses the `tree` layout,
+    /// which already lists every tab. It comes back when the sidebar is
+    /// collapsed. Default: false.
+    pub hide_tab_bar_with_tree_sidebar: bool,
     /// Animation played over the last frame when the client detaches.
     /// Default: none.
     pub detach_effect: DetachEffectConfig,
@@ -1216,6 +1220,7 @@ impl Default for UiConfig {
             pane_gaps: true,
             show_agent_labels_on_pane_borders: false,
             hide_tab_bar_when_single_tab: false,
+            hide_tab_bar_with_tree_sidebar: false,
             detach_effect: DetachEffectConfig::None,
             detach_effect_ms: 500,
             tab_bar_position: TabBarPositionConfig::Top,
@@ -1533,6 +1538,7 @@ passthrough_commands = ["nvim", "vim"]
         assert!(default_config.ui.pane_gaps);
         assert!(!default_config.ui.show_agent_labels_on_pane_borders);
         assert!(!default_config.ui.hide_tab_bar_when_single_tab);
+        assert!(!default_config.ui.hide_tab_bar_with_tree_sidebar);
         assert_eq!(
             default_config.ui.tab_bar_position,
             TabBarPositionConfig::Top
@@ -1548,6 +1554,7 @@ pane_scrollbars = false
 pane_gaps = true
 show_agent_labels_on_pane_borders = true
 hide_tab_bar_when_single_tab = true
+hide_tab_bar_with_tree_sidebar = true
 tab_bar_position = "bottom"
 tab_bar_right = [
   { type = "zoom" },
@@ -1565,6 +1572,7 @@ tab_bar_right_separator = " · "
         assert!(config.ui.pane_gaps);
         assert!(config.ui.show_agent_labels_on_pane_borders);
         assert!(config.ui.hide_tab_bar_when_single_tab);
+        assert!(config.ui.hide_tab_bar_with_tree_sidebar);
         assert_eq!(config.ui.tab_bar_position, TabBarPositionConfig::Bottom);
         assert_eq!(config.ui.tab_bar_right.len(), 5);
         assert!(matches!(
