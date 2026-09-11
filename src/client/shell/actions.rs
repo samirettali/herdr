@@ -149,6 +149,13 @@ impl ClientShellState {
                     outcome.repaint = true;
                     return;
                 }
+                if action == crate::input::KeybindAction::TabPicker {
+                    self.mode = ClientShellMode::NavigateTabs;
+                    self.navigate_tab = self.focused_tab_navigation_target();
+                    self.reveal_navigation_workspace = true;
+                    outcome.repaint = true;
+                    return;
+                }
                 if action == crate::input::KeybindAction::EnterResizeMode {
                     self.mode = ClientShellMode::Resize;
                     outcome.repaint = true;

@@ -80,7 +80,7 @@ impl ClientShellState {
     pub(crate) fn host_keyboard_report_all_requested(&self) -> bool {
         matches!(
             self.mode,
-            ClientShellMode::Prefix | ClientShellMode::Navigate
+            ClientShellMode::Prefix | ClientShellMode::Navigate | ClientShellMode::NavigateTabs
         )
     }
 
@@ -602,6 +602,10 @@ impl ClientShellState {
                 self.route_navigate_key(key, outcome);
                 None
             }
+            ClientShellMode::NavigateTabs => {
+                self.route_navigate_tabs_key(key, outcome);
+                None
+            }
             ClientShellMode::Resize => {
                 self.route_resize_key(key, outcome);
                 None
@@ -625,6 +629,35 @@ impl ClientShellState {
             ClientShellMode::Copy
         } else {
             ClientShellMode::Terminal
+        }
+    }
+
+    /// Tab navigation takes the navigate-mode movement keys, Enter and Esc,
+    /// and swallows everything else so a stray key never reaches the pane.
+    fn route_navigate_tabs_key(
+        &mut self,
+        key: &crate::input::TerminalKey,
+        outcome: &mut ClientShellInput,
+    ) {
+        outcome.repaint = true;
+        if key.code == KeyCode::Esc
+            || crate::config::terminal_key_matches_combo(key, self.config.keybinds.prefix)
+        {
+            self.leave_navigate_tabs();
+            return;
+        }
+        let navigate = &self.config.keybinds.keybinds.navigate;
+        if navigate.workspace_up.matches_direct_key(key) {
+            self.move_navigate_tab(-1);
+            return;
+        }
+        if navigate.workspace_down.matches_direct_key(key) {
+            self.move_navigate_tab(1);
+            return;
+        }
+        let (code, modifiers) = crate::config::normalize_key_combo((key.code, key.modifiers));
+        if code == KeyCode::Enter && modifiers.is_empty() {
+            self.accept_navigate_tab(outcome);
         }
     }
 

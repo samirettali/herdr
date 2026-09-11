@@ -362,7 +362,13 @@ pub(super) fn render_expanded(
                         })
                     })
             }
-            Row::Endpoint(_) | Row::Tab { .. } => false,
+            Row::Tab { endpoint, row, .. } => {
+                let endpoint = &state.endpoints[*endpoint];
+                state
+                    .selected_tab
+                    .is_some_and(|target| target.matches(&endpoint.endpoint_id, &row.tab_id))
+            }
+            Row::Endpoint(_) => false,
         });
         if let Some(selected_row) = selected_row {
             *state.workspace_scroll = super::scroll::list_scroll_start_to_reveal(
@@ -526,6 +532,9 @@ pub(super) fn render_expanded(
                     row,
                     *last,
                     &endpoint.endpoint_id == state.active_endpoint_id,
+                    state
+                        .selected_tab
+                        .is_some_and(|target| target.matches(&endpoint.endpoint_id, &row.tab_id)),
                     config,
                 );
                 if endpoint.status != ClientEndpointStatus::Online {

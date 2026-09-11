@@ -334,6 +334,8 @@ pub(super) enum ClientShellMode {
     Terminal,
     Prefix,
     Navigate,
+    /// Navigate mode over the tab rows of the tree sidebar.
+    NavigateTabs,
     Resize,
     Copy,
 }
@@ -940,6 +942,7 @@ pub(crate) struct ClientShellState {
     pub(super) collapsed_endpoints: HashSet<ClientEndpointId>,
     pub(super) mode: ClientShellMode,
     pub(super) navigate_workspace_id: Option<WorkspaceNavigationTarget>,
+    pub(super) navigate_tab: Option<TabNavigationTarget>,
     pub(super) reveal_navigation_workspace: bool,
     pub(super) overlay: Option<ClientShellOverlay>,
     pub(super) previous_pane_id: Option<String>,
@@ -1098,6 +1101,7 @@ impl ClientShellState {
             collapsed_endpoints: HashSet::new(),
             mode: ClientShellMode::Terminal,
             navigate_workspace_id: None,
+            navigate_tab: None,
             reveal_navigation_workspace: false,
             overlay,
             previous_pane_id: None,
@@ -1285,6 +1289,7 @@ impl ClientShellState {
         self.visible_endpoint_notice = None;
         self.endpoint_error = None;
         self.navigate_workspace_id = None;
+        self.navigate_tab = None;
         self.overlay = self
             .config
             .startup_onboarding
@@ -1404,10 +1409,14 @@ impl ClientShellState {
             } else if active_keymap_changed
                 && matches!(
                     self.mode,
-                    ClientShellMode::Prefix | ClientShellMode::Navigate | ClientShellMode::Resize
+                    ClientShellMode::Prefix
+                        | ClientShellMode::Navigate
+                        | ClientShellMode::NavigateTabs
+                        | ClientShellMode::Resize
                 )
             {
                 self.mode = ClientShellMode::Terminal;
+                self.navigate_tab = None;
             }
         }
         let tab_layout_changed = self.snapshot.as_deref().is_none_or(|current| {
@@ -1677,6 +1686,7 @@ impl ClientShellState {
             }
             self.mode = ClientShellMode::Terminal;
             self.navigate_workspace_id = None;
+            self.navigate_tab = None;
             if !matches!(
                 self.overlay.as_ref(),
                 Some(ClientShellOverlay::Onboarding | ClientShellOverlay::ProductAnnouncement(_))

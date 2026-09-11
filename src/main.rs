@@ -155,6 +155,8 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # reload_config = "prefix+shift+r"
 # open_notification_target = "prefix+o"
 # workspace_picker = "prefix+w"
+# The same mode over the tab rows of the tree sidebar: up/down keys move, enter focuses.
+# tab_picker = "prefix+t"
 # goto = "prefix+g"
 # new_workspace = "prefix+shift+n"
 # new_worktree = "prefix+shift+g"

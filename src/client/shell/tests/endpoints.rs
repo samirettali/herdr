@@ -1835,6 +1835,123 @@ fn tree_layout_works_with_the_local_machine_alone() {
 }
 
 #[test]
+fn tab_picker_walks_every_tab_of_every_machine_and_enter_focuses_it() {
+    let config = toml::from_str::<Config>(
+        r#"
+[keys]
+prefix = "ctrl+b"
+tab_picker = "prefix+t"
+
+[ui.sidebar]
+layout = "tree"
+"#,
+    )
+    .expect("tab picker config");
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    let profile = remote_profile();
+    let endpoint_id = ClientEndpointId::Ssh(profile.id.clone());
+    state.set_endpoint_catalog(&[profile]);
+    state.set_endpoint_status(&endpoint_id, ClientEndpointStatus::Online);
+    let mut local = snapshot();
+    let mut second_tab = local.tabs[0].clone();
+    second_tab.tab_id = "tab_2".into();
+    second_tab.number = 2;
+    second_tab.label = "second".into();
+    second_tab.focused = false;
+    local.tabs.push(second_tab);
+    state.set_snapshot(Box::new(local));
+    state.set_pane_surface(surface());
+    let mut remote = snapshot();
+    remote.boot_id = "remote-boot".into();
+    state.set_endpoint_snapshot(&endpoint_id, Box::new(remote));
+    state.compose(100, 28).expect("tree frame");
+
+    let key = |code: crossterm::event::KeyCode, modifiers: KeyModifiers| {
+        RawInputEvent::Key(crate::input::TerminalKey::new(code, modifiers))
+    };
+    let prefix = || key(crossterm::event::KeyCode::Char('b'), KeyModifiers::CONTROL);
+    let down = || key(crossterm::event::KeyCode::Down, KeyModifiers::empty());
+    let enter = || key(crossterm::event::KeyCode::Enter, KeyModifiers::empty());
+
+    state.handle_raw_events(vec![
+        prefix(),
+        key(crossterm::event::KeyCode::Char('t'), KeyModifiers::empty()),
+    ]);
+    assert_eq!(state.mode, ClientShellMode::NavigateTabs);
+    assert!(
+        state
+            .navigate_tab
+            .as_ref()
+            .is_some_and(|target| target.matches(&ClientEndpointId::Local, "tab_1")),
+        "the selection starts on the focused tab"
+    );
+
+    state.handle_raw_events(vec![down()]);
+    assert!(state
+        .navigate_tab
+        .as_ref()
+        .is_some_and(|target| target.matches(&ClientEndpointId::Local, "tab_2")));
+    let frame = state.compose(100, 28).expect("selection frame");
+    let selected = state
+        .hits
+        .sidebar_tabs
+        .iter()
+        .find(|(_, _, tab_id)| tab_id == "tab_2")
+        .map(|(rect, _, _)| *rect)
+        .expect("selected tab row");
+    let buffer = frame.to_ratatui_buffer().expect("selection frame");
+    let palette = &state.config.palette;
+    let expected = if palette.selection_bg == ratatui::style::Color::Reset {
+        palette.active_row_bg
+    } else {
+        palette.selection_bg
+    };
+    assert_eq!(
+        buffer[(selected.x, selected.y)].bg,
+        expected,
+        "the selected tab row takes the selection background"
+    );
+
+    let accept = state.handle_raw_events(vec![enter()]);
+    let [ClientShellAction::Endpoint { request, .. }] = &accept.actions[..] else {
+        panic!("enter focuses the selected local tab through the endpoint API");
+    };
+    assert!(matches!(
+        &request.method,
+        crate::api::schema::Method::TabFocus(target) if target.tab_id == "tab_2"
+    ));
+    assert_eq!(state.mode, ClientShellMode::Terminal);
+    assert!(state.navigate_tab.is_none());
+
+    state.handle_raw_events(vec![
+        prefix(),
+        key(crossterm::event::KeyCode::Char('t'), KeyModifiers::empty()),
+        down(),
+        down(),
+    ]);
+    assert!(state
+        .navigate_tab
+        .as_ref()
+        .is_some_and(|target| target.matches(&endpoint_id, "tab_1")));
+    let accept = state.handle_raw_events(vec![enter()]);
+    assert!(matches!(
+        accept.actions.as_slice(),
+        [ClientShellAction::ActivateEndpoint {
+            endpoint_id: activated,
+            target: Some(ClientEndpointFocusTarget::Tab(tab_id)),
+        }] if activated == &endpoint_id && tab_id == "tab_1"
+    ));
+
+    state.handle_raw_events(vec![
+        prefix(),
+        key(crossterm::event::KeyCode::Char('t'), KeyModifiers::empty()),
+        key(crossterm::event::KeyCode::Esc, KeyModifiers::empty()),
+    ]);
+    assert_eq!(state.mode, ClientShellMode::Terminal);
+    assert!(state.navigate_tab.is_none());
+}
+
+#[test]
 fn tree_layout_can_take_the_tab_bar_with_it_while_the_sidebar_is_open() {
     let mut config = tree_layout_config();
     config.ui.hide_tab_bar_with_tree_sidebar = true;

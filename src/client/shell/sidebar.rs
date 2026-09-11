@@ -291,10 +291,21 @@ pub(crate) fn render_sidebar(
         body.height,
         *state.workspace_scroll,
     );
-    if !body.is_empty() && std::mem::take(state.reveal_focused_workspace) {
+    // Both flags survive a body without rows, so the reveal happens on the
+    // next frame that has room for it.
+    let reveal_focused = !body.is_empty() && std::mem::take(state.reveal_focused_workspace);
+    let reveal_selected_tab = !body.is_empty()
+        && state.selected_tab.is_some()
+        && std::mem::take(state.reveal_navigation_workspace);
+    if reveal_focused || reveal_selected_tab {
         if let Some(target) = rows.iter().position(|row| match row {
-            Row::Workspace(entry) => snapshot.workspaces[entry.index].focused,
-            Row::Tab { .. } => false,
+            Row::Workspace(entry) => reveal_focused && snapshot.workspaces[entry.index].focused,
+            Row::Tab { row, .. } => {
+                reveal_selected_tab
+                    && state
+                        .selected_tab
+                        .is_some_and(|target| target.matches(&ClientEndpointId::Local, &row.tab_id))
+            }
         }) {
             *state.workspace_scroll = super::scroll::list_scroll_start_to_reveal(
                 &row_heights,
@@ -328,7 +339,18 @@ pub(crate) fn render_sidebar(
                     break;
                 }
                 let rect = Rect::new(body.x, y, content_width, row_height);
-                super::tree_sidebar::render_tab_row(buffer, rect, entry, row, *last, true, config);
+                super::tree_sidebar::render_tab_row(
+                    buffer,
+                    rect,
+                    entry,
+                    row,
+                    *last,
+                    true,
+                    state.selected_tab.is_some_and(|target| {
+                        target.matches(&ClientEndpointId::Local, &row.tab_id)
+                    }),
+                    config,
+                );
                 hits.sidebar_tabs
                     .push((rect, ClientEndpointId::Local, row.tab_id.clone()));
                 y = y.saturating_add(row_height + gap_before(rows.get(position + 1)));

@@ -109,6 +109,18 @@ pub(super) fn render_mode_bar(
                     (" keybinds".to_owned(), base),
                 ]);
             }
+            ClientShellMode::NavigateTabs => {
+                segments.extend([
+                    (" NAVIGATE ".to_owned(), mode_style),
+                    (" esc back  ".to_owned(), base),
+                    ("↑/↓".to_owned(), key),
+                    (" tab  ".to_owned(), base),
+                    ("enter".to_owned(), key),
+                    (" focus  ".to_owned(), base),
+                    (prefix_rhs(&keybinds.keybinds.help), key),
+                    (" keybinds".to_owned(), base),
+                ]);
+            }
             ClientShellMode::Resize => {
                 segments.extend([
                     (" RESIZE ".to_owned(), mode_style),
@@ -225,6 +237,7 @@ pub(super) struct ShellRenderState<'a> {
     pub(super) sidebar_section_split: f32,
     pub(super) tab_drag_insert_index: Option<usize>,
     pub(super) selected_workspace_id: Option<&'a WorkspaceNavigationTarget>,
+    pub(super) selected_tab: Option<&'a TabNavigationTarget>,
     pub(super) reveal_navigation_workspace: &'a mut bool,
     pub(super) dragged_workspace_id: Option<&'a str>,
     pub(super) workspace_drop_indicator_row: Option<u16>,

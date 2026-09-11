@@ -115,6 +115,7 @@ pub(super) fn render_tab_row(
     row: &TabRow,
     last: bool,
     endpoint_active: bool,
+    selected: bool,
     config: &ClientShellConfig,
 ) {
     let palette = &config.palette;
@@ -184,7 +185,16 @@ pub(super) fn render_tab_row(
         ));
         Paragraph::new(Line::from(spans)).render(Rect::new(area.x, y, area.width, 1), buffer);
     }
-    if focused {
+    // The navigation selection paints over the focus, as it does on the
+    // workspace rows.
+    if selected {
+        let background = if palette.selection_bg == ratatui::style::Color::Reset {
+            palette.active_row_bg
+        } else {
+            palette.selection_bg
+        };
+        buffer.set_style(area, Style::default().bg(background));
+    } else if focused {
         buffer.set_style(area, Style::default().bg(palette.active_row_bg));
     }
 }
