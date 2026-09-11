@@ -352,9 +352,11 @@ pub(crate) fn render_sidebar(
             buffer.set_style(rect, Style::default().bg(palette.selection_bg));
         } else if dragged {
             buffer.set_style(rect, Style::default().bg(palette.surface1));
-        } else if workspace.focused {
+        } else if workspace.focused && !tree {
             buffer.set_style(rect, Style::default().bg(palette.active_row_bg));
         }
+        // In the tree the focused tab row carries the highlight, so the
+        // workspace row does not repeat it.
         render_workspace_rows(
             buffer,
             rect,
@@ -363,7 +365,7 @@ pub(crate) fn render_sidebar(
             config.status_indicators,
             entry,
             tokens,
-            true,
+            !tree,
             selected,
             dragged,
             palette,
