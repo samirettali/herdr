@@ -36,17 +36,34 @@ rows = [["state_icon", "tab", "spacer", "agent"]]
 ```
 
 ```
- machines
   ▾ 󰇄 mbp
-    ● dotfiles                    main
-      ├─ ● claude · Claude Code
-      └─ · shell
-    ○ sottocasa                   feat/booking
-      └─ ○ codex
+  ● dotfiles                      main
+    ├─ ● claude · Claude Code
+    └─ · shell
+  ○ sottocasa                     feat/booking
+    └─ ○ codex
   ▾  andromeda
-    ○ servers
-      └─ · nvim
+  ○ servers
+    └─ · nvim
 ```
+
+There is no `machines` header: the first row is the first machine, or the first workspace on a
+lone one. Workspace labels sit under the machine's collapse marker rather than two columns
+further in, the focused tab's background spans the whole row, gutter to gutter, and a remote
+machine's connection signal ends on the same column as the tab rows instead of touching the
+edge.
+
+The footer buttons are optional in either layout:
+
+```toml
+[ui.sidebar]
+new_button = false    # the " new" workspace button
+menu_button = false   # the "menu" launcher
+```
+
+The global menu opens only from that launcher, so without it the menu and its update badge are
+gone. Settings, help, reload and detach keep their keybindings; the release notes have no key
+and live only in that menu. The collapse toggle in the corner stays either way.
 
 Tab rows take the agent row vocabulary, `rows_by_agent` included, so a tab that runs an agent
 renders exactly like its agents-panel row would. A plain tab only has `state_icon`,
@@ -60,13 +77,12 @@ The branch glyphs are optional. `guides = "indent"` under `[ui.sidebar.tabs]` dr
 sets each tab two columns in from its workspace label:
 
 ```
- machines
   ▾ 󰇄 mbp
-    dotfiles                      main
-      ● claude · Claude Code
-      · shell
-    sottocasa                     feat/booking
-      ○ codex
+  dotfiles                        main
+    ● claude · Claude Code
+    · shell
+  sottocasa                       feat/booking
+    ○ codex
 ```
 
 With the tree open the tab bar repeats what the sidebar shows, so it can go:
