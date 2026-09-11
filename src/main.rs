@@ -374,6 +374,8 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # fills state_icon, state_text, machine, workspace, tab and spacer; the rest drop out.
 # [ui.sidebar.tabs]
 # rows = [["state_icon", "tab"]]
+# What joins a tab row to its workspace: "lines" draws branch glyphs, "indent" only indents.
+# guides = "lines"
 # [ui.sidebar.tabs.rows_by_agent]
 # claude = [["state_icon", "tab", "spacer", "agent"]]
 

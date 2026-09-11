@@ -600,6 +600,19 @@ pub struct TabsSidebarConfig {
     pub rows: AgentSidebarRows,
     #[serde(default, deserialize_with = "deserialize_rows_by_agent")]
     pub rows_by_agent: BTreeMap<String, AgentSidebarRows>,
+    /// How a tab row is joined to its workspace. Default: lines.
+    pub guides: TabGuidesConfig,
+}
+
+/// What sits between the left edge and a tab row of the tree layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TabGuidesConfig {
+    /// Branch glyphs, `├─` and `└─`, with a `│` trunk down to the last tab.
+    #[default]
+    Lines,
+    /// Indentation alone, two columns in from the workspace label.
+    Indent,
 }
 
 impl TabsSidebarConfig {
@@ -615,6 +628,7 @@ impl Default for TabsSidebarConfig {
         Self {
             rows: vec![vec![AgentSidebarToken::StateIcon, AgentSidebarToken::Tab]],
             rows_by_agent: BTreeMap::new(),
+            guides: TabGuidesConfig::Lines,
         }
     }
 }
@@ -664,6 +678,7 @@ mod tests {
             vec![vec![AgentSidebarToken::StateIcon, AgentSidebarToken::Tab]]
         );
         assert!(config.tabs.rows_by_agent.is_empty());
+        assert_eq!(config.tabs.guides, TabGuidesConfig::Lines);
     }
 
     #[test]
@@ -675,6 +690,7 @@ layout = "tree"
 
 [ui.sidebar.tabs]
 rows = [["state_icon", "tab", "spacer", "agent"]]
+guides = "indent"
 
 [ui.sidebar.tabs.rows_by_agent]
 codex = [["tab"]]
@@ -682,6 +698,7 @@ codex = [["tab"]]
         )
         .expect("tree layout config");
         assert_eq!(config.ui.sidebar.layout, SidebarLayoutConfig::Tree);
+        assert_eq!(config.ui.sidebar.tabs.guides, TabGuidesConfig::Indent);
         assert_eq!(
             config.ui.sidebar.tabs.rows,
             vec![vec![

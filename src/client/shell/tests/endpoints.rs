@@ -1791,6 +1791,11 @@ fn tree_layout_works_with_the_local_machine_alone() {
         crate::api::schema::Method::TabFocus(target) if target.tab_id == "tab_1"
     ));
 
+    state.config.tabs.guides = crate::config::TabGuidesConfig::Indent;
+    let text = frame_text(&mut state);
+    assert!(text.contains("   ● editor"), "frame: {text}");
+    assert!(!text.contains("└─"), "frame: {text}");
+
     state.config.sidebar_layout = crate::config::SidebarLayoutConfig::Panels;
     let text = frame_text(&mut state);
     assert!(text.contains(" agents"), "panels are back: {text}");

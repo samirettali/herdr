@@ -119,14 +119,13 @@ pub(super) fn render_tab_row(
 ) {
     let palette = &config.palette;
     let focused = endpoint_active && row.focused;
-    let trunk = if entry.indented {
-        if entry.last_child {
-            "      "
-        } else {
-            "   │  "
-        }
-    } else {
-        "   "
+    let lines = config.tabs.guides == crate::config::TabGuidesConfig::Lines;
+    let trunk = match (lines, entry.indented, entry.last_child) {
+        (true, true, false) => "   │  ",
+        (true, true, true) => "      ",
+        (true, false, _) => "   ",
+        (false, true, _) => "        ",
+        (false, false, _) => "   ",
     };
     let name_style = if focused {
         Style::default()
@@ -161,16 +160,12 @@ pub(super) fn render_tab_row(
     };
     for (index, tokens) in rows.iter().take(area.height as usize).enumerate() {
         let y = area.y + index as u16;
-        let branch = if index > 0 {
-            if last {
-                "   "
-            } else {
-                "│  "
-            }
-        } else if last {
-            "└─ "
-        } else {
-            "├─ "
+        let branch = match (lines, index > 0, last) {
+            (false, _, _) => "",
+            (true, true, true) => "   ",
+            (true, true, false) => "│  ",
+            (true, false, true) => "└─ ",
+            (true, false, false) => "├─ ",
         };
         let prefix = format!("{trunk}{branch}");
         let prefix_width = super::render::display_width(&prefix);

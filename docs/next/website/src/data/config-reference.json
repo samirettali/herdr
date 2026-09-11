@@ -1214,6 +1214,16 @@
           "description": "Complete tab-row overrides keyed by strict canonical agent id, for tabs that run that agent."
         },
         {
+          "key": "ui.sidebar.tabs.guides",
+          "type": "enum",
+          "default": "\"lines\"",
+          "description": "What joins a tab row to its workspace in the tree layout: lines draws branch glyphs, indent only indents the row.",
+          "values": [
+            "lines",
+            "indent"
+          ]
+        },
+        {
           "key": "ui.sidebar.agents.row_gap",
           "type": "integer",
           "default": "0",

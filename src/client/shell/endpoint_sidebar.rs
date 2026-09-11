@@ -450,7 +450,9 @@ pub(super) fn render_expanded(
                     rect.width.saturating_sub(2),
                     rect.height,
                 );
-                let endpoint_active = &endpoint.endpoint_id == state.active_endpoint_id;
+                // In the tree the focused tab row carries the highlight, so
+                // the workspace row does not repeat it.
+                let endpoint_active = &endpoint.endpoint_id == state.active_endpoint_id && !tree;
                 let selected = state.selected_workspace_id.is_some_and(|target| {
                     target.matches(&endpoint.endpoint_id, &workspace.workspace_id)
                 });
