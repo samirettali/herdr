@@ -37,21 +37,21 @@ rows = [["state_icon", "tab", "spacer", "agent"]]
 
 ```
   ▾ 󰇄 mbp
-  ● dotfiles                      main
-    ├─ ● claude · Claude Code
-    └─ · shell
-  ○ sottocasa                     feat/booking
-    └─ ○ codex
+    ● dotfiles                    main
+      ├─ ● claude · Claude Code
+      └─ · shell
+    ○ sottocasa                   feat/booking
+      └─ ○ codex
   ▾  andromeda
-  ○ servers
-    └─ · nvim
+    ○ servers
+      └─ · nvim
 ```
 
 There is no `machines` header: the first row is the first machine, or the first workspace on a
-lone one. Workspace labels sit under the machine's collapse marker rather than two columns
-further in, the focused tab's background spans the whole row, gutter to gutter, and a remote
-machine's connection signal ends on the same column as the tab rows instead of touching the
-edge.
+lone one. The focused tab's background spans the whole row, edge to edge, and every row keeps
+one column of margin on either side: the machine's marker sits one in from the left, and the
+tab rows' spacer and the remote machine's connection signal both end one column in from the
+right, so the signal lines up with the agent names below it.
 
 The footer buttons are optional in either layout:
 
@@ -78,11 +78,11 @@ sets each tab two columns in from its workspace label:
 
 ```
   ▾ 󰇄 mbp
-  dotfiles                        main
-    ● claude · Claude Code
-    · shell
-  sottocasa                       feat/booking
-    ○ codex
+    dotfiles                      main
+      ● claude · Claude Code
+      · shell
+    sottocasa                     feat/booking
+      ○ codex
 ```
 
 With the tree open the tab bar repeats what the sidebar shows, so it can go:
