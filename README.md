@@ -97,6 +97,24 @@ back the moment the sidebar is collapsed, so a hidden sidebar never leaves you w
 indicator. What goes with the row is what only the row offered: the `+` for a new tab by mouse,
 dragging tabs to reorder them and the `tab_bar_right` segments. The keys are unaffected.
 
+### Tab navigation
+
+`prefix+w` walks the workspaces: a selection moves through the sidebar, Enter goes there. With
+every tab in the sidebar the same mode wants to walk the tabs:
+
+```toml
+[keys]
+tab_picker = "prefix+t"   # unset by default
+```
+
+It is the workspace navigation mode over the tab rows, not a popup. `navigate_workspace_up`
+and `navigate_workspace_down` move the selection through every tab of every online machine
+in sidebar order, wrapping at the ends and unfolding a collapsed machine as they pass; Enter
+focuses the selected tab, switching machine first when it lives on another one; Esc, the prefix
+or a mouse click leave the mode. The selection paints the tab row with `selection_bg`, as the
+workspace one does. Nothing else is bound while it is open, so a stray key never reaches the
+pane.
+
 ### A `spacer` sidebar token
 
 Sidebar rows are already token lists. A `spacer` eats whatever width the other tokens of its
