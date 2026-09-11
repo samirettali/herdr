@@ -20,6 +20,41 @@ the rewrite for 0.9: upstream now styles every sidebar token inline
 rest was not worth carrying across a client/server split that rewrote the whole TUI. The old
 branch survives as `patched-0.8.2`.
 
+### One tree instead of two panels
+
+Upstream's sidebar is two panels, spaces above agents, and a session's tabs live in a third
+place, the tab bar. Knowing where you are means reading all three. The `tree` layout folds
+them into one: every workspace lists its tabs under it, each tab carries the state of the
+agent it runs, and the agents panel goes away.
+
+```toml
+[ui.sidebar]
+layout = "tree"   # panels (default) | tree
+
+[ui.sidebar.tabs]
+rows = [["state_icon", "tab", "spacer", "agent"]]
+```
+
+```
+ machines
+  ▾ 󰇄 mbp
+    ● dotfiles                    main
+      ├─ ● claude · Claude Code
+      └─ · shell
+    ○ sottocasa                   feat/booking
+      └─ ○ codex
+  ▾  andromeda
+    ○ servers
+      └─ · nvim
+```
+
+Tab rows take the agent row vocabulary, `rows_by_agent` included, so a tab that runs an agent
+renders exactly like its agents-panel row would. A plain tab only has `state_icon`,
+`state_text`, `machine`, `workspace`, `tab` and `spacer`; the agent tokens drop out of its row
+and its icon is the dim `·` of an unknown state. The focused tab gets the active row
+background, clicking a tab focuses it, on another machine too, and the agent keys still walk
+the agents in order. The collapsed sidebar and the mobile switcher are untouched.
+
 ### A `spacer` sidebar token
 
 Sidebar rows are already token lists. A `spacer` eats whatever width the other tokens of its
