@@ -131,8 +131,10 @@ impl ClientShellConfig {
             hide_tab_bar_when_single_tab: config.ui.hide_tab_bar_when_single_tab,
             detach_effect: config.ui.detach_effect,
             detach_effect_ms: config.ui.detach_effect_ms,
+            sidebar_layout: config.ui.sidebar.layout,
             spaces: config.ui.sidebar.spaces.clone(),
             agents: config.ui.sidebar.agents.clone(),
+            tabs: config.ui.sidebar.tabs.clone(),
             machines: config.ui.sidebar.machines.clone(),
             agent_panel_sort: config.ui.agent_panel_sort,
             status_indicators: config.ui.status_indicators,
@@ -337,8 +339,10 @@ impl ClientShellConfig {
                 self.hide_tab_bar_when_single_tab = ui.hide_tab_bar_when_single_tab;
                 self.detach_effect = ui.detach_effect;
                 self.detach_effect_ms = ui.detach_effect_ms;
+                self.sidebar_layout = ui.sidebar.layout;
                 self.spaces = ui.sidebar.spaces.clone();
                 self.agents = ui.sidebar.agents.clone();
+                self.tabs = ui.sidebar.tabs.clone();
                 self.machines = ui.sidebar.machines.clone();
                 self.agent_panel_sort = ui.agent_panel_sort;
                 self.status_indicators = ui.status_indicators;

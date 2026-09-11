@@ -33,6 +33,7 @@ mod settings;
 mod state;
 mod surface_patch;
 mod text_editor;
+mod tree_sidebar;
 mod word_selection;
 mod worktrees;
 use text_editor::TextEditor;

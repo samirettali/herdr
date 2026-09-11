@@ -195,10 +195,20 @@ pub(crate) fn render_sidebar(
     } else {
         Rect::new(area.right().saturating_sub(1), area.y, 1, area.height)
     };
-    let (workspace_area, detail_area) =
-        crate::ui::expanded_sidebar_sections(area, state.sidebar_section_split);
-    hits.sidebar_section_divider =
-        crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split);
+    let tree = config.sidebar_layout == crate::config::SidebarLayoutConfig::Tree;
+    let (workspace_area, detail_area) = if tree {
+        (
+            Rect::new(area.x, area.y, area.width.saturating_sub(1), area.height),
+            Rect::default(),
+        )
+    } else {
+        crate::ui::expanded_sidebar_sections(area, state.sidebar_section_split)
+    };
+    hits.sidebar_section_divider = if tree {
+        Rect::default()
+    } else {
+        crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split)
+    };
     put_text(
         buffer,
         workspace_area.x,
@@ -210,7 +220,31 @@ pub(crate) fn render_sidebar(
             .add_modifier(Modifier::BOLD),
     );
 
-    let entries = workspace_entries(snapshot, state.collapsed_groups);
+    enum Row {
+        Workspace(WorkspaceEntry),
+        Tab {
+            entry: WorkspaceEntry,
+            row: super::tree_sidebar::TabRow,
+            last: bool,
+        },
+    }
+    let mut rows = Vec::new();
+    for entry in workspace_entries(snapshot, state.collapsed_groups) {
+        rows.push(Row::Workspace(entry));
+        if !tree {
+            continue;
+        }
+        let Some(workspace) = snapshot.workspaces.get(entry.index) else {
+            continue;
+        };
+        let tabs = super::tree_sidebar::tab_rows(snapshot, workspace, config, None);
+        let count = tabs.len();
+        rows.extend(tabs.into_iter().enumerate().map(|(index, row)| Row::Tab {
+            entry,
+            row,
+            last: index + 1 == count,
+        }));
+    }
     let body = Rect::new(
         workspace_area.x,
         workspace_area.y.saturating_add(WORKSPACE_HEADER_ROWS),
@@ -220,10 +254,10 @@ pub(crate) fn render_sidebar(
             .saturating_sub(WORKSPACE_HEADER_ROWS + 1),
     );
     hits.workspace_body = body;
-    let row_heights = entries
+    let row_heights = rows
         .iter()
-        .map(|entry| {
-            snapshot
+        .map(|row| match row {
+            Row::Workspace(entry) => snapshot
                 .workspaces
                 .get(entry.index)
                 .map(|workspace| {
@@ -237,17 +271,18 @@ pub(crate) fn render_sidebar(
                     .max(1)
                     .min(u16::MAX as usize) as u16
                 })
-                .unwrap_or(1)
+                .unwrap_or(1),
+            Row::Tab { row, .. } => super::tree_sidebar::tab_row_height(row),
         })
         .collect::<Vec<_>>();
-    let gaps = entries
+    let gap_before = |row: Option<&Row>| match row {
+        Some(Row::Workspace(next)) => u16::from(!next.indented) * config.spaces.row_gap,
+        _ => 0,
+    };
+    let gaps = rows
         .iter()
         .enumerate()
-        .map(|(index, _)| {
-            entries
-                .get(index + 1)
-                .map_or(0, |next| u16::from(!next.indented) * config.spaces.row_gap)
-        })
+        .map(|(index, _)| gap_before(rows.get(index + 1)))
         .collect::<Vec<_>>();
     let mut metrics = super::scroll::list_scroll_metrics(
         &row_heights,
@@ -256,10 +291,10 @@ pub(crate) fn render_sidebar(
         *state.workspace_scroll,
     );
     if !body.is_empty() && std::mem::take(state.reveal_focused_workspace) {
-        if let Some(target) = entries
-            .iter()
-            .position(|entry| snapshot.workspaces[entry.index].focused)
-        {
+        if let Some(target) = rows.iter().position(|row| match row {
+            Row::Workspace(entry) => snapshot.workspaces[entry.index].focused,
+            Row::Tab { .. } => false,
+        }) {
             *state.workspace_scroll = super::scroll::list_scroll_start_to_reveal(
                 &row_heights,
                 &gaps,
@@ -283,13 +318,28 @@ pub(crate) fn render_sidebar(
     let show_scrollbar = metrics.max_offset_from_bottom > 0 && body.width > 1;
     let content_width = body.width.saturating_sub(u16::from(show_scrollbar));
     let mut y = body.y;
-    for (entry_position, entry) in entries.iter().enumerate().skip(*state.workspace_scroll) {
+    for (position, row) in rows.iter().enumerate().skip(*state.workspace_scroll) {
+        let entry = match row {
+            Row::Workspace(entry) => entry,
+            Row::Tab { entry, row, last } => {
+                let row_height = super::tree_sidebar::tab_row_height(row).min(body.height);
+                if y.saturating_add(row_height) > body.bottom() {
+                    break;
+                }
+                let rect = Rect::new(body.x, y, content_width, row_height);
+                super::tree_sidebar::render_tab_row(buffer, rect, entry, row, *last, true, config);
+                hits.sidebar_tabs
+                    .push((rect, ClientEndpointId::Local, row.tab_id.clone()));
+                y = y.saturating_add(row_height + gap_before(rows.get(position + 1)));
+                continue;
+            }
+        };
         let Some(workspace) = snapshot.workspaces.get(entry.index) else {
             continue;
         };
         let status = displayed_workspace_status(snapshot, workspace, state.collapsed_groups);
-        let rows = workspace_rows(workspace, status, entry.indented, &config.spaces);
-        let row_height = (rows.len().max(1).min(u16::MAX as usize) as u16).min(body.height);
+        let tokens = workspace_rows(workspace, status, entry.indented, &config.spaces);
+        let row_height = (tokens.len().max(1).min(u16::MAX as usize) as u16).min(body.height);
         if y.saturating_add(row_height) > body.bottom() {
             break;
         }
@@ -312,7 +362,7 @@ pub(crate) fn render_sidebar(
             status,
             config.status_indicators,
             entry,
-            rows,
+            tokens,
             true,
             selected,
             dragged,
@@ -333,10 +383,7 @@ pub(crate) fn render_sidebar(
             indented: entry.indented,
             group_toggle,
         });
-        let gap = entries
-            .get(entry_position + 1)
-            .map_or(0, |next| u16::from(!next.indented) * config.spaces.row_gap);
-        y = y.saturating_add(row_height + gap);
+        y = y.saturating_add(row_height + gap_before(rows.get(position + 1)));
     }
 
     if show_scrollbar {
@@ -414,14 +461,16 @@ pub(crate) fn render_sidebar(
         }
     }
 
-    super::render_agent_panel(
-        buffer,
-        detail_area,
-        snapshot,
-        config,
-        state.agent_scroll,
-        hits,
-    );
+    if !tree {
+        super::render_agent_panel(
+            buffer,
+            detail_area,
+            snapshot,
+            config,
+            state.agent_scroll,
+            hits,
+        );
+    }
 
     hits.sidebar_toggle = Rect::new(
         area.right().saturating_sub(2),
