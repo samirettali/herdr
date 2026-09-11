@@ -81,6 +81,8 @@ pub(crate) struct ClientShellConfig {
     pub(super) detach_effect: crate::config::DetachEffectConfig,
     pub(super) detach_effect_ms: u64,
     pub(super) sidebar_layout: crate::config::SidebarLayoutConfig,
+    pub(super) sidebar_new_button: bool,
+    pub(super) sidebar_menu_button: bool,
     pub(super) spaces: SpacesSidebarConfig,
     pub(super) agents: crate::config::AgentsSidebarConfig,
     pub(super) tabs: crate::config::TabsSidebarConfig,

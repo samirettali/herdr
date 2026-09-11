@@ -209,16 +209,18 @@ pub(crate) fn render_sidebar(
     } else {
         crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split)
     };
-    put_text(
-        buffer,
-        workspace_area.x,
-        workspace_area.y,
-        workspace_area.width,
-        " spaces",
-        Style::default()
-            .fg(palette.overlay0)
-            .add_modifier(Modifier::BOLD),
-    );
+    if !tree {
+        put_text(
+            buffer,
+            workspace_area.x,
+            workspace_area.y,
+            workspace_area.width,
+            " spaces",
+            Style::default()
+                .fg(palette.overlay0)
+                .add_modifier(Modifier::BOLD),
+        );
+    }
 
     enum Row {
         Workspace(WorkspaceEntry),
@@ -245,13 +247,12 @@ pub(crate) fn render_sidebar(
             last: index + 1 == count,
         }));
     }
+    let header_rows = if tree { 0 } else { WORKSPACE_HEADER_ROWS };
     let body = Rect::new(
         workspace_area.x,
-        workspace_area.y.saturating_add(WORKSPACE_HEADER_ROWS),
+        workspace_area.y.saturating_add(header_rows),
         workspace_area.width,
-        workspace_area
-            .height
-            .saturating_sub(WORKSPACE_HEADER_ROWS + 1),
+        workspace_area.height.saturating_sub(header_rows + 1),
     );
     hits.workspace_body = body;
     let row_heights = rows
@@ -395,7 +396,7 @@ pub(crate) fn render_sidebar(
     }
 
     if let Some(row) = state.workspace_drop_indicator_row.filter(|row| {
-        *row >= workspace_area.y.saturating_add(1)
+        *row >= body.y.saturating_sub(1).max(workspace_area.y)
             && *row < workspace_area.bottom().saturating_sub(1)
     }) {
         put_text(
@@ -409,7 +410,7 @@ pub(crate) fn render_sidebar(
     }
 
     let footer_y = workspace_area.bottom().saturating_sub(1);
-    if config.mouse_capture {
+    if config.mouse_capture && config.sidebar_new_button {
         hits.new_workspace = Rect::new(
             workspace_area.x,
             footer_y,
@@ -424,6 +425,8 @@ pub(crate) fn render_sidebar(
             " new",
             Style::default().fg(palette.overlay0),
         );
+    }
+    if config.mouse_capture && config.sidebar_menu_button {
         let attention = super::super::global_menu::global_menu_attention(snapshot);
         let launcher_width = if attention { 8 } else { 6 }.min(workspace_area.width);
         hits.global_launcher = Rect::new(

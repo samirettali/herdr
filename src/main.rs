@@ -369,6 +369,11 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # and drops the agents panel.
 # [ui.sidebar]
 # layout = "panels"
+# The tree has no section header: its first row is the first machine, or the first
+# workspace on a lone machine.
+# The footer buttons, each optional. The collapse toggle stays.
+# new_button = true
+# menu_button = true
 
 # Tab rows of the tree layout, with the agent row vocabulary. A tab without an agent only
 # fills state_icon, state_text, machine, workspace, tab and spacer; the rest drop out.

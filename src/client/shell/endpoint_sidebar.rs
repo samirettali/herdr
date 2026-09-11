@@ -244,16 +244,18 @@ pub(super) fn render_expanded(
     } else {
         crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split)
     };
-    put_text(
-        buffer,
-        workspace_area.x,
-        workspace_area.y,
-        workspace_area.width,
-        " machines",
-        Style::default()
-            .fg(palette.overlay0)
-            .add_modifier(Modifier::BOLD),
-    );
+    if !tree {
+        put_text(
+            buffer,
+            workspace_area.x,
+            workspace_area.y,
+            workspace_area.width,
+            " machines",
+            Style::default()
+                .fg(palette.overlay0)
+                .add_modifier(Modifier::BOLD),
+        );
+    }
 
     let empty_collapsed_groups = HashSet::new();
 
@@ -303,13 +305,12 @@ pub(super) fn render_expanded(
             }
         }
     }
+    let header_rows = if tree { 0 } else { WORKSPACE_HEADER_ROWS };
     let body = Rect::new(
         workspace_area.x,
-        workspace_area.y.saturating_add(WORKSPACE_HEADER_ROWS),
+        workspace_area.y.saturating_add(header_rows),
         workspace_area.width,
-        workspace_area
-            .height
-            .saturating_sub(WORKSPACE_HEADER_ROWS + 1),
+        workspace_area.height.saturating_sub(header_rows + 1),
     );
     hits.workspace_body = body;
     let row_heights = rows
@@ -404,6 +405,9 @@ pub(super) fn render_expanded(
                     endpoint,
                     &config.machines.display_label(&endpoint.label),
                     collapsed && &endpoint.endpoint_id == state.active_endpoint_id,
+                    // The tree's rows end two columns in from the edge, one
+                    // for the spacer gutter and one for the row itself.
+                    if tree { 2 } else { 0 },
                     palette,
                 );
                 hits.machines.push(MachineHit {
@@ -444,12 +448,18 @@ pub(super) fn render_expanded(
                     break;
                 }
                 let rect = Rect::new(body.x, y, content_width, height);
-                let nested = Rect::new(
-                    rect.x.saturating_add(2),
-                    rect.y,
-                    rect.width.saturating_sub(2),
-                    rect.height,
-                );
+                // The tree keeps the workspace label under the machine's
+                // collapse marker; the panels indent it two more columns.
+                let nested = if tree {
+                    rect
+                } else {
+                    Rect::new(
+                        rect.x.saturating_add(2),
+                        rect.y,
+                        rect.width.saturating_sub(2),
+                        rect.height,
+                    )
+                };
                 // In the tree the focused tab row carries the highlight, so
                 // the workspace row does not repeat it.
                 let endpoint_active = &endpoint.endpoint_id == state.active_endpoint_id && !tree;
@@ -509,15 +519,9 @@ pub(super) fn render_expanded(
                     break;
                 }
                 let rect = Rect::new(body.x, y, content_width, height);
-                let nested = Rect::new(
-                    rect.x.saturating_add(2),
-                    rect.y,
-                    rect.width.saturating_sub(2),
-                    rect.height,
-                );
                 super::tree_sidebar::render_tab_row(
                     buffer,
-                    nested,
+                    rect,
                     entry,
                     row,
                     *last,
@@ -545,7 +549,7 @@ pub(super) fn render_expanded(
     }
 
     let footer_y = workspace_area.bottom().saturating_sub(1);
-    if config.mouse_capture {
+    if config.mouse_capture && config.sidebar_new_button {
         let label = format!(
             " new · {}",
             config.machines.display_label(active_endpoint_label(state))
@@ -564,6 +568,8 @@ pub(super) fn render_expanded(
             &label,
             Style::default().fg(palette.overlay0),
         );
+    }
+    if config.mouse_capture && config.sidebar_menu_button {
         let attention = active_snapshot.is_some_and(super::global_menu::global_menu_attention);
         let width = if attention { 8 } else { 6 }.min(workspace_area.width);
         hits.global_launcher = Rect::new(
@@ -639,11 +645,18 @@ fn render_endpoint_row(
     endpoint: &ClientShellEndpoint,
     label: &str,
     highlighted: bool,
+    signal_inset: u16,
     palette: &Palette,
 ) {
     if highlighted {
         buffer.set_style(rect, Style::default().bg(palette.active_row_bg));
     }
+    let signal_rect = Rect::new(
+        rect.x,
+        rect.y,
+        rect.width.saturating_sub(signal_inset),
+        rect.height,
+    );
     let (glyph, state, color) = endpoint_status_presentation(endpoint.status, palette);
     let state = if endpoint.status == ClientEndpointStatus::Online {
         ""
@@ -657,12 +670,14 @@ fn render_endpoint_row(
     } else {
         format!("{glyph} {state}")
     };
-    let signal_width = display_width(&signal).min(rect.width);
+    let signal_width = display_width(&signal).min(signal_rect.width);
     put_text(
         buffer,
         rect.x,
         rect.y,
-        rect.width.saturating_sub(signal_width.saturating_add(1)),
+        signal_rect
+            .width
+            .saturating_sub(signal_width.saturating_add(1)),
         &format!(" {marker} {label}"),
         Style::default()
             .fg(
@@ -674,5 +689,11 @@ fn render_endpoint_row(
             )
             .add_modifier(Modifier::BOLD),
     );
-    put_right_text(buffer, rect, rect.y, &signal, Style::default().fg(color));
+    put_right_text(
+        buffer,
+        signal_rect,
+        rect.y,
+        &signal,
+        Style::default().fg(color),
+    );
 }

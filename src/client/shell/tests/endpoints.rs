@@ -1700,8 +1700,33 @@ fn tree_layout_lists_tabs_under_their_workspace_on_every_machine() {
     assert!(text.contains("local pi"), "frame: {text}");
     assert!(text.contains("└─ ○ remote-tab"), "frame: {text}");
     assert!(!text.contains(" agents"), "no agents panel: {text}");
+    assert!(!text.contains(" machines"), "no header: {text}");
+    assert!(
+        text.lines()
+            .next()
+            .is_some_and(|line| line.contains("Local")),
+        "the first row is the first machine: {text}"
+    );
     assert!(state.hits.endpoint_agents.is_empty());
     assert_eq!(state.hits.sidebar_section_divider, Rect::default());
+    assert!(
+        !state.hits.new_workspace.is_empty(),
+        "new button on by default"
+    );
+    assert!(
+        !state.hits.global_launcher.is_empty(),
+        "menu button on by default"
+    );
+    state.config.sidebar_new_button = false;
+    state.config.sidebar_menu_button = false;
+    let text = frame_text(&mut state);
+    assert!(!text.contains(" new"), "frame: {text}");
+    assert!(!text.contains("menu"), "frame: {text}");
+    assert!(state.hits.new_workspace.is_empty());
+    assert!(state.hits.global_launcher.is_empty());
+    state.config.sidebar_new_button = true;
+    state.config.sidebar_menu_button = true;
+    frame_text(&mut state);
     let tab_ids = state
         .hits
         .sidebar_tabs
@@ -1773,6 +1798,13 @@ fn tree_layout_works_with_the_local_machine_alone() {
     assert!(text.contains("└─ ● editor"), "frame: {text}");
     assert!(text.contains("local pi"), "frame: {text}");
     assert!(!text.contains(" agents"), "no agents panel: {text}");
+    assert!(!text.contains(" spaces"), "no header: {text}");
+    assert!(
+        text.lines()
+            .next()
+            .is_some_and(|line| line.contains("client-shell")),
+        "the first row is the first workspace: {text}"
+    );
     assert!(state.hits.agents.is_empty());
     assert_eq!(state.hits.sidebar_tabs.len(), 1);
 
