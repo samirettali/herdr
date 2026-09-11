@@ -664,6 +664,13 @@ impl ClientShellState {
             self.navigate_workspace_id = None;
             outcome.repaint = true;
         }
+        if self.mode == ClientShellMode::NavigateTabs
+            && self.overlay.is_none()
+            && mouse.kind == MouseEventKind::Down(MouseButton::Left)
+        {
+            self.leave_navigate_tabs();
+            outcome.repaint = true;
+        }
         if matches!(self.overlay, Some(ClientShellOverlay::Onboarding)) {
             if mouse.kind == MouseEventKind::Down(MouseButton::Left)
                 && super::contains(self.hits.overlay_primary, point)

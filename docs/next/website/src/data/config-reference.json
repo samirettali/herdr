@@ -644,6 +644,12 @@
           "description": "Open the workspace navigation surface."
         },
         {
+          "key": "keys.tab_picker",
+          "type": "keybinding",
+          "default": "unset",
+          "description": "Open tab navigation: the workspace navigation mode over the tab rows of the tree sidebar. The navigate up/down keys move across every tab of every online machine, enter focuses the selected tab, esc leaves."
+        },
+        {
           "key": "keys.goto",
           "type": "keybinding",
           "default": "\"prefix+g\"",
