@@ -411,9 +411,9 @@ pub(super) fn render_expanded(
                     endpoint,
                     &config.machines.display_label(&endpoint.label),
                     collapsed && &endpoint.endpoint_id == state.active_endpoint_id,
-                    // The tree's rows end two columns in from the edge, one
-                    // for the spacer gutter and one for the row itself.
-                    if tree { 2 } else { 0 },
+                    // The tree's rows keep one column of margin on the right,
+                    // the spacer gutter; the signal ends on the same column.
+                    if tree { 1 } else { 0 },
                     palette,
                 );
                 hits.machines.push(MachineHit {
@@ -454,18 +454,12 @@ pub(super) fn render_expanded(
                     break;
                 }
                 let rect = Rect::new(body.x, y, content_width, height);
-                // The tree keeps the workspace label under the machine's
-                // collapse marker; the panels indent it two more columns.
-                let nested = if tree {
-                    rect
-                } else {
-                    Rect::new(
-                        rect.x.saturating_add(2),
-                        rect.y,
-                        rect.width.saturating_sub(2),
-                        rect.height,
-                    )
-                };
+                let nested = Rect::new(
+                    rect.x.saturating_add(2),
+                    rect.y,
+                    rect.width.saturating_sub(2),
+                    rect.height,
+                );
                 // In the tree the focused tab row carries the highlight, so
                 // the workspace row does not repeat it.
                 let endpoint_active = &endpoint.endpoint_id == state.active_endpoint_id && !tree;
@@ -535,6 +529,7 @@ pub(super) fn render_expanded(
                     state
                         .selected_tab
                         .is_some_and(|target| target.matches(&endpoint.endpoint_id, &row.tab_id)),
+                    2,
                     config,
                 );
                 if endpoint.status != ClientEndpointStatus::Online {
