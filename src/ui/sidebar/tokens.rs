@@ -78,9 +78,33 @@ pub(crate) fn agent_rows(
     context: AgentTokenContext<'_>,
     state_text: &str,
 ) -> Vec<Vec<ResolvedToken>> {
-    config
-        .rows_for_agent(context.canonical_agent)
-        .iter()
+    resolve_agent_rows(
+        config.rows_for_agent(context.canonical_agent),
+        context,
+        state_text,
+    )
+}
+
+/// The tab rows of the tree layout, resolved with the same vocabulary as the
+/// agent rows. A tab without an agent has no agent tokens, so those drop out.
+pub(crate) fn tab_rows(
+    config: &crate::config::TabsSidebarConfig,
+    context: AgentTokenContext<'_>,
+    state_text: &str,
+) -> Vec<Vec<ResolvedToken>> {
+    resolve_agent_rows(
+        config.rows_for_agent(context.canonical_agent),
+        context,
+        state_text,
+    )
+}
+
+fn resolve_agent_rows(
+    rows: &[Vec<AgentSidebarToken>],
+    context: AgentTokenContext<'_>,
+    state_text: &str,
+) -> Vec<Vec<ResolvedToken>> {
+    rows.iter()
         .filter_map(|row| {
             let resolved = row
                 .iter()

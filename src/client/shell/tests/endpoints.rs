@@ -1637,3 +1637,162 @@ hide_agents_when_collapsed = true
         "off, collapsing only folds the workspaces"
     );
 }
+
+fn tree_layout_config() -> Config {
+    toml::from_str::<Config>(
+        r#"
+[ui.sidebar]
+layout = "tree"
+
+[ui.sidebar.tabs]
+rows = [["state_icon", "tab", "spacer", "agent"]]
+"#,
+    )
+    .expect("tree layout config")
+}
+
+fn frame_text(state: &mut ClientShellState) -> String {
+    let frame = state.compose(100, 28).expect("tree layout frame");
+    frame
+        .cells
+        .chunks(frame.width as usize)
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.symbol.as_str())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[test]
+fn tree_layout_lists_tabs_under_their_workspace_on_every_machine() {
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&tree_layout_config()));
+    let profile = remote_profile();
+    let endpoint_id = ClientEndpointId::Ssh(profile.id.clone());
+    state.set_endpoint_catalog(&[profile]);
+    state.set_endpoint_status(&endpoint_id, ClientEndpointStatus::Online);
+    let mut local = snapshot();
+    local.tabs[0].label = "editor".into();
+    let mut second_tab = local.tabs[0].clone();
+    second_tab.tab_id = "tab_2".into();
+    second_tab.number = 2;
+    second_tab.label = "agent".into();
+    second_tab.focused = false;
+    second_tab.agent_status = AgentStatus::Working;
+    local.tabs.push(second_tab);
+    let mut local_agent = agent("local pi", AgentStatus::Working, 2);
+    local_agent.pane_id = "pane_2".into();
+    local_agent.tab_id = "tab_2".into();
+    local_agent.focused = false;
+    local.agents = vec![local_agent];
+    state.set_snapshot(Box::new(local));
+    state.set_pane_surface(surface());
+    let mut remote = snapshot();
+    remote.boot_id = "remote-boot".into();
+    remote.workspaces[0].label = "remote-workspace".into();
+    remote.tabs[0].label = "remote-tab".into();
+    state.set_endpoint_snapshot(&endpoint_id, Box::new(remote));
+
+    let text = frame_text(&mut state);
+    assert!(text.contains("├─ ○ editor"), "frame: {text}");
+    assert!(text.contains("└─ ● agent"), "frame: {text}");
+    assert!(text.contains("local pi"), "frame: {text}");
+    assert!(text.contains("└─ ○ remote-tab"), "frame: {text}");
+    assert!(!text.contains(" agents"), "no agents panel: {text}");
+    assert!(state.hits.endpoint_agents.is_empty());
+    assert_eq!(state.hits.sidebar_section_divider, Rect::default());
+    let tab_ids = state
+        .hits
+        .sidebar_tabs
+        .iter()
+        .map(|(_, endpoint, tab_id)| (endpoint.clone(), tab_id.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        tab_ids,
+        vec![
+            (ClientEndpointId::Local, "tab_1"),
+            (ClientEndpointId::Local, "tab_2"),
+            (endpoint_id.clone(), "tab_1"),
+        ]
+    );
+
+    let local_hit = state.hits.sidebar_tabs[1].0;
+    let click = state.handle_raw_events(vec![RawInputEvent::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: local_hit.x + 6,
+        row: local_hit.y,
+        modifiers: KeyModifiers::empty(),
+    })]);
+    let [ClientShellAction::Endpoint { request, .. }] = &click.actions[..] else {
+        panic!("a local tab row focuses through the endpoint API");
+    };
+    assert!(matches!(
+        &request.method,
+        crate::api::schema::Method::TabFocus(target) if target.tab_id == "tab_2"
+    ));
+
+    let remote_hit = state.hits.sidebar_tabs[2].0;
+    let click = state.handle_raw_events(vec![RawInputEvent::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: remote_hit.x + 6,
+        row: remote_hit.y,
+        modifiers: KeyModifiers::empty(),
+    })]);
+    assert!(matches!(
+        click.actions.as_slice(),
+        [ClientShellAction::ActivateEndpoint {
+            endpoint_id: activated,
+            target: Some(ClientEndpointFocusTarget::Tab(tab_id)),
+        }] if activated == &endpoint_id && tab_id == "tab_1"
+    ));
+
+    state.collapsed_endpoints.insert(endpoint_id.clone());
+    frame_text(&mut state);
+    assert!(
+        !state
+            .hits
+            .sidebar_tabs
+            .iter()
+            .any(|(_, id, _)| id == &endpoint_id),
+        "a collapsed machine folds its tabs with its workspaces"
+    );
+}
+
+#[test]
+fn tree_layout_works_with_the_local_machine_alone() {
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&tree_layout_config()));
+    let mut local = snapshot();
+    local.tabs[0].label = "editor".into();
+    local.tabs[0].agent_status = AgentStatus::Working;
+    local.agents = vec![agent("local pi", AgentStatus::Working, 2)];
+    state.set_snapshot(Box::new(local));
+    state.set_pane_surface(surface());
+
+    let text = frame_text(&mut state);
+    assert!(text.contains("└─ ● editor"), "frame: {text}");
+    assert!(text.contains("local pi"), "frame: {text}");
+    assert!(!text.contains(" agents"), "no agents panel: {text}");
+    assert!(state.hits.agents.is_empty());
+    assert_eq!(state.hits.sidebar_tabs.len(), 1);
+
+    let hit = state.hits.sidebar_tabs[0].0;
+    let click = state.handle_raw_events(vec![RawInputEvent::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: hit.x + 6,
+        row: hit.y,
+        modifiers: KeyModifiers::empty(),
+    })]);
+    let [ClientShellAction::Endpoint { request, .. }] = &click.actions[..] else {
+        panic!("a tab row focuses through the endpoint API");
+    };
+    assert!(matches!(
+        &request.method,
+        crate::api::schema::Method::TabFocus(target) if target.tab_id == "tab_1"
+    ));
+
+    state.config.sidebar_layout = crate::config::SidebarLayoutConfig::Panels;
+    let text = frame_text(&mut state);
+    assert!(text.contains(" agents"), "panels are back: {text}");
+    assert!(state.hits.sidebar_tabs.is_empty());
+}

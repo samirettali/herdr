@@ -2093,6 +2093,9 @@ impl ClientShellState {
                     self.tab_press = Some(tab_press);
                     return;
                 }
+                if self.handle_sidebar_tab_click(point, outcome) {
+                    return;
+                }
                 if self.handle_endpoint_agent_click(point, outcome) {
                     return;
                 }

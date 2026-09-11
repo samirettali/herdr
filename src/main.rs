@@ -360,6 +360,19 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # distinct static glyphs for blocked, working, done, idle, and unknown states.
 # status_indicators = "dots"
 
+# How the expanded sidebar is laid out: "panels" keeps a spaces panel above an agents panel,
+# "tree" lists every workspace's tabs under it, each with the state of the agent it runs,
+# and drops the agents panel.
+# [ui.sidebar]
+# layout = "panels"
+
+# Tab rows of the tree layout, with the agent row vocabulary. A tab without an agent only
+# fills state_icon, state_text, machine, workspace, tab and spacer; the rest drop out.
+# [ui.sidebar.tabs]
+# rows = [["state_icon", "tab"]]
+# [ui.sidebar.tabs.rows_by_agent]
+# claude = [["state_icon", "tab", "spacer", "agent"]]
+
 # Expanded agent rows. Built-ins are state_icon, state_text, machine, workspace, tab,
 # pane, agent, terminal_title, terminal_title_stripped, and spacer.
 # A spacer eats the width the other tokens left over, so what follows it ends flush right.

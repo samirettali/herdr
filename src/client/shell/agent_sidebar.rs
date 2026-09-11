@@ -387,7 +387,7 @@ fn display_width(text: &str) -> usize {
     unicode_width::UnicodeWidthStr::width(text)
 }
 
-fn sidebar_status_text(status: crate::api::schema::AgentStatus) -> &'static str {
+pub(super) fn sidebar_status_text(status: crate::api::schema::AgentStatus) -> &'static str {
     use crate::api::schema::AgentStatus;
     match status {
         AgentStatus::Blocked => "blocked",

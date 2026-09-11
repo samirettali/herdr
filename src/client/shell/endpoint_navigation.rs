@@ -86,6 +86,33 @@ impl ClientShellState {
         true
     }
 
+    /// A tab row of the tree sidebar layout focuses that tab, activating its
+    /// machine first when the tab lives on another one.
+    pub(super) fn handle_sidebar_tab_click(
+        &mut self,
+        point: (u16, u16),
+        outcome: &mut ClientShellInput,
+    ) -> bool {
+        let Some((endpoint_id, tab_id)) = self
+            .hits
+            .sidebar_tabs
+            .iter()
+            .find(|(rect, _, _)| super::contains(*rect, point))
+            .map(|(_, endpoint_id, tab_id)| (endpoint_id.clone(), tab_id.clone()))
+        else {
+            return false;
+        };
+        if endpoint_id == self.active_endpoint_id {
+            self.push_endpoint_method(
+                crate::api::schema::Method::TabFocus(crate::api::schema::TabTarget { tab_id }),
+                outcome,
+            );
+        } else {
+            self.focus_or_activate(endpoint_id, ClientEndpointFocusTarget::Tab(tab_id), outcome);
+        }
+        true
+    }
+
     pub(super) fn handle_endpoint_agent_click(
         &mut self,
         point: (u16, u16),

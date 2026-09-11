@@ -577,11 +577,55 @@ impl MachinesSidebarConfig {
     }
 }
 
+/// How the expanded sidebar is laid out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SidebarLayoutConfig {
+    /// A spaces panel above an agents panel, split by a draggable divider.
+    #[default]
+    Panels,
+    /// One tree: every workspace lists its tabs, each tab carrying its agent
+    /// state, and there is no agents panel.
+    Tree,
+}
+
+/// The tab rows of the `tree` layout. They use the agent token vocabulary:
+/// for a tab that runs an agent every token resolves as in the agents panel,
+/// for a plain tab only `state_icon`, `state_text`, `machine`, `workspace`,
+/// `tab` and `spacer` have a value and the rest drop out of the row.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct TabsSidebarConfig {
+    #[serde(deserialize_with = "deserialize_sidebar_rows")]
+    pub rows: AgentSidebarRows,
+    #[serde(default, deserialize_with = "deserialize_rows_by_agent")]
+    pub rows_by_agent: BTreeMap<String, AgentSidebarRows>,
+}
+
+impl TabsSidebarConfig {
+    pub(crate) fn rows_for_agent(&self, agent: Option<Agent>) -> &AgentSidebarRows {
+        agent
+            .and_then(|agent| self.rows_by_agent.get(crate::detect::agent_label(agent)))
+            .unwrap_or(&self.rows)
+    }
+}
+
+impl Default for TabsSidebarConfig {
+    fn default() -> Self {
+        Self {
+            rows: vec![vec![AgentSidebarToken::StateIcon, AgentSidebarToken::Tab]],
+            rows_by_agent: BTreeMap::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SidebarConfig {
+    pub layout: SidebarLayoutConfig,
     pub agents: AgentsSidebarConfig,
     pub spaces: SpacesSidebarConfig,
+    pub tabs: TabsSidebarConfig,
     pub machines: MachinesSidebarConfig,
 }
 
@@ -614,6 +658,50 @@ mod tests {
             ]
         );
         assert_eq!(config.spaces.row_gap, 0);
+        assert_eq!(config.layout, SidebarLayoutConfig::Panels);
+        assert_eq!(
+            config.tabs.rows,
+            vec![vec![AgentSidebarToken::StateIcon, AgentSidebarToken::Tab]]
+        );
+        assert!(config.tabs.rows_by_agent.is_empty());
+    }
+
+    #[test]
+    fn parses_the_tree_layout_and_its_tab_rows() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar]
+layout = "tree"
+
+[ui.sidebar.tabs]
+rows = [["state_icon", "tab", "spacer", "agent"]]
+
+[ui.sidebar.tabs.rows_by_agent]
+codex = [["tab"]]
+"#,
+        )
+        .expect("tree layout config");
+        assert_eq!(config.ui.sidebar.layout, SidebarLayoutConfig::Tree);
+        assert_eq!(
+            config.ui.sidebar.tabs.rows,
+            vec![vec![
+                AgentSidebarToken::StateIcon,
+                AgentSidebarToken::Tab,
+                AgentSidebarToken::Spacer,
+                AgentSidebarToken::Agent,
+            ]]
+        );
+        assert_eq!(
+            config
+                .ui
+                .sidebar
+                .tabs
+                .rows_for_agent(Some(crate::detect::Agent::Codex)),
+            &vec![vec![AgentSidebarToken::Tab]]
+        );
+        assert!(
+            toml::from_str::<crate::config::Config>("[ui.sidebar]\nlayout = \"grid\"").is_err()
+        );
     }
 
     #[test]

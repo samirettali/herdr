@@ -31,6 +31,7 @@ mod scroll;
 mod settings;
 mod state;
 mod surface_patch;
+mod tree_sidebar;
 mod word_selection;
 mod worktrees;
 use word_selection::ClientWordSelection;

@@ -230,10 +230,20 @@ pub(super) fn render_expanded(
     } else {
         Rect::new(area.right().saturating_sub(1), area.y, 1, area.height)
     };
-    let (workspace_area, detail_area) =
-        crate::ui::expanded_sidebar_sections(area, state.sidebar_section_split);
-    hits.sidebar_section_divider =
-        crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split);
+    let tree = config.sidebar_layout == crate::config::SidebarLayoutConfig::Tree;
+    let (workspace_area, detail_area) = if tree {
+        (
+            Rect::new(area.x, area.y, area.width.saturating_sub(1), area.height),
+            Rect::default(),
+        )
+    } else {
+        crate::ui::expanded_sidebar_sections(area, state.sidebar_section_split)
+    };
+    hits.sidebar_section_divider = if tree {
+        Rect::default()
+    } else {
+        crate::ui::sidebar_section_divider_rect(area, state.sidebar_section_split)
+    };
     put_text(
         buffer,
         workspace_area.x,
@@ -253,6 +263,12 @@ pub(super) fn render_expanded(
             endpoint: usize,
             entry: WorkspaceEntry,
         },
+        Tab {
+            endpoint: usize,
+            entry: WorkspaceEntry,
+            row: super::tree_sidebar::TabRow,
+            last: bool,
+        },
     }
     let mut rows = Vec::new();
     for (endpoint_index, endpoint) in state.endpoints.iter().enumerate() {
@@ -263,14 +279,28 @@ pub(super) fn render_expanded(
         if let Some(snapshot) = endpoint.snapshot.as_deref() {
             let collapsed_groups = collapsed_groups_for_endpoint(state, &endpoint.endpoint_id)
                 .unwrap_or(&empty_collapsed_groups);
-            rows.extend(
-                super::sidebar::workspace_entries(snapshot, collapsed_groups)
-                    .into_iter()
-                    .map(|entry| Row::Workspace {
-                        endpoint: endpoint_index,
-                        entry,
-                    }),
-            );
+            let machine = config.machines.agent_token(&endpoint.label);
+            for entry in super::sidebar::workspace_entries(snapshot, collapsed_groups) {
+                rows.push(Row::Workspace {
+                    endpoint: endpoint_index,
+                    entry,
+                });
+                if !tree {
+                    continue;
+                }
+                let Some(workspace) = snapshot.workspaces.get(entry.index) else {
+                    continue;
+                };
+                let tabs =
+                    super::tree_sidebar::tab_rows(snapshot, workspace, config, Some(&machine));
+                let count = tabs.len();
+                rows.extend(tabs.into_iter().enumerate().map(|(index, row)| Row::Tab {
+                    endpoint: endpoint_index,
+                    entry,
+                    row,
+                    last: index + 1 == count,
+                }));
+            }
         }
     }
     let body = Rect::new(
@@ -313,6 +343,7 @@ pub(super) fn render_expanded(
                     })
                     .unwrap_or(1)
             }
+            Row::Tab { row, .. } => super::tree_sidebar::tab_row_height(row),
         })
         .collect::<Vec<_>>();
     let gaps = vec![0; rows.len()];
@@ -330,7 +361,7 @@ pub(super) fn render_expanded(
                         })
                     })
             }
-            Row::Endpoint(_) => false,
+            Row::Endpoint(_) | Row::Tab { .. } => false,
         });
         if let Some(selected_row) = selected_row {
             *state.workspace_scroll = super::scroll::list_scroll_start_to_reveal(
@@ -464,6 +495,45 @@ pub(super) fn render_expanded(
                 });
                 y = y.saturating_add(height);
             }
+            Row::Tab {
+                endpoint,
+                entry,
+                row,
+                last,
+            } => {
+                let endpoint = &state.endpoints[*endpoint];
+                let height = super::tree_sidebar::tab_row_height(row).min(body.height);
+                if y.saturating_add(height) > body.bottom() {
+                    break;
+                }
+                let rect = Rect::new(body.x, y, content_width, height);
+                let nested = Rect::new(
+                    rect.x.saturating_add(2),
+                    rect.y,
+                    rect.width.saturating_sub(2),
+                    rect.height,
+                );
+                super::tree_sidebar::render_tab_row(
+                    buffer,
+                    nested,
+                    entry,
+                    row,
+                    *last,
+                    &endpoint.endpoint_id == state.active_endpoint_id,
+                    config,
+                );
+                if endpoint.status != ClientEndpointStatus::Online {
+                    buffer.set_style(
+                        rect,
+                        Style::default()
+                            .fg(palette.overlay0)
+                            .add_modifier(Modifier::DIM),
+                    );
+                }
+                hits.sidebar_tabs
+                    .push((rect, endpoint.endpoint_id.clone(), row.tab_id.clone()));
+                y = y.saturating_add(height);
+            }
         }
     }
     if show_scrollbar {
@@ -512,17 +582,19 @@ pub(super) fn render_expanded(
             }),
         );
     }
-    super::endpoint_agents::render_expanded(
-        buffer,
-        detail_area,
-        active_snapshot.and_then(|snapshot| snapshot.agent_view_label.as_deref()),
-        state.endpoints,
-        state.active_endpoint_id,
-        config,
-        hidden_agent_endpoints(state, config),
-        state.agent_scroll,
-        hits,
-    );
+    if !tree {
+        super::endpoint_agents::render_expanded(
+            buffer,
+            detail_area,
+            active_snapshot.and_then(|snapshot| snapshot.agent_view_label.as_deref()),
+            state.endpoints,
+            state.active_endpoint_id,
+            config,
+            hidden_agent_endpoints(state, config),
+            state.agent_scroll,
+            hits,
+        );
+    }
     hits.sidebar_toggle = Rect::new(
         area.right().saturating_sub(2),
         area.bottom().saturating_sub(1),

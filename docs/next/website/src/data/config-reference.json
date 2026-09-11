@@ -1186,6 +1186,28 @@
           ]
         },
         {
+          "key": "ui.sidebar.layout",
+          "type": "enum",
+          "default": "\"panels\"",
+          "description": "How the expanded sidebar is laid out. panels keeps a Spaces panel above an Agents panel; tree lists every workspace's tabs under it, each carrying the state of the agent it runs, and drops the Agents panel.",
+          "values": [
+            "panels",
+            "tree"
+          ]
+        },
+        {
+          "key": "ui.sidebar.tabs.rows",
+          "type": "list of token rows",
+          "default": "[[\"state_icon\", \"tab\"]]",
+          "description": "Tab rows of the tree layout, using the Agent row vocabulary. A tab without an agent only fills state_icon, state_text, machine, workspace, tab and spacer; the other tokens drop out of the row."
+        },
+        {
+          "key": "ui.sidebar.tabs.rows_by_agent",
+          "type": "table of token rows",
+          "default": "{}",
+          "description": "Complete tab-row overrides keyed by strict canonical agent id, for tabs that run that agent."
+        },
+        {
           "key": "ui.sidebar.agents.row_gap",
           "type": "integer",
           "default": "0",
